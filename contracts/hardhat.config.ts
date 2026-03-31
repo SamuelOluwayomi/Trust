@@ -1,18 +1,16 @@
-import { HardhatUserConfig } from "hardhat/config";
+import { defineConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import dotenv from "dotenv";
 dotenv.config();
 
-const config: HardhatUserConfig = {
-  solidity: "0.8.20",
+export default defineConfig({
+  solidity: "0.8.28",
   networks: {
     hashkey_testnet: {
+      type: "http",
       url: "https://testnet.hsk.xyz",
       chainId: 133,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
-};
-
-export default config;
-
+});
