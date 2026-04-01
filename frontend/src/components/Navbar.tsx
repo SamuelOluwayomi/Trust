@@ -6,7 +6,7 @@ import { ShieldCheck, Compass, GithubLogo, BookOpen, SignIn, UserPlus } from "@p
 
 export default function Navbar() {
   const navLinks = [
-    { label: "Sentinel Portal", icon: Compass, href: "#sentinel-portal" },
+    { label: "Portal", icon: Compass, href: "#portal" },
     { label: "Github", icon: GithubLogo, href: "#github" },
     { label: "Documentation", icon: BookOpen, href: "#documentation" },
   ];

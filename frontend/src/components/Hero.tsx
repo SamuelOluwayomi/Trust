@@ -20,7 +20,7 @@ const Feature = ({ icon: Icon, title, desc }: { icon: React.ComponentType<{ clas
   </motion.div>
 );
 
-export default function SentinelHero() {
+export default function Hero() {
   return (
     <section className="relative z-10 pt-36 pb-20 px-6 max-w-6xl mx-auto flex flex-col items-center text-center">
       <motion.h1

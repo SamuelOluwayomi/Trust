@@ -72,7 +72,7 @@ function Shard({ index, z, speed, color, size }: { index: number, z: number, spe
   );
 }
 
-export default function SentinelBackground() {
+export default function Background() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
