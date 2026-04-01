@@ -2,10 +2,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FACC15;
-  --foreground: #171717;
-  --accent: #b56605;
-  --accent-light: #d4850a;
+  --background: #0F172A;
+  --foreground: #F8FAFC;
+  --accent: #10B981;
+  --accent-light: #34D399;
 }
 
 @theme inline {
@@ -16,7 +16,7 @@
 }
 
 body {
-  background: linear-gradient(165deg, #FDE68A 0%, #FACC15 35%, #EAB308 70%, #D4A00A 100%);
+  background: linear-gradient(165deg, #020617 0%, #0F172A 35%, #1E293B 70%, #0F172A 100%);
   color: var(--foreground);
   font-family: 'Inter', Arial, Helvetica, sans-serif;
   min-height: 100vh;
@@ -27,6 +27,6 @@ html {
 }
 
 ::selection {
-  background: rgba(181, 102, 5, 0.3);
-  color: #171717;
+  background: rgba(16, 185, 129, 0.3);
+  color: #F8FAFC;
 }
