@@ -73,10 +73,9 @@ export default function HowItWorks() {
           </h2>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-20 items-start">
-
-          {/* LEFT -- Steps (scrollable) */}
-          <div className="flex-1 space-y-32">
+        <div className="flex flex-col lg:flex-row gap-20">
+          <div className="flex-1 space-y-32 relative">
+            {/* Steps (scrollable) */}
             {steps.map((step, i) => (
               <div
                 key={i}
