@@ -62,7 +62,7 @@ export default function HowItWorks() {
   }, []);
 
   return (
-    <section className="relative py-30 px-8 bg-[#020617]/40 backdrop-blur-sm">
+    <section className="relative py-32 px-8 bg-[#020617]/40 backdrop-blur-sm">
       <div className="max-w-6xl mx-auto">
 
         {/* Section heading */}
@@ -106,9 +106,9 @@ export default function HowItWorks() {
           </div>
 
           {/* RIGHT -- Compact Sticky Flow Diagram */}
-          <div className="hidden lg:flex w-80 sticky top-24 self-start flex-col items-center">
-
-              {flowNodes.map((node, i) => (
+          <div className="hidden lg:flex w-80 flex-col items-center">
+            <div className="sticky top-24 flex flex-col items-center w-full">
+               {flowNodes.map((node, i) => (
                 <div key={i} className="flex flex-col items-center w-full">
 
                   {/* Node box */}
@@ -132,20 +132,30 @@ export default function HowItWorks() {
                       boxShadow: i === activeStep ? '0 0 20px rgba(16,185,129,0.15)' : 'none',
                     }}
                   >
-                    <p
-                      className="text-[11px] font-black tracking-widest uppercase"
-                      style={{
-                        color: i === activeStep ? '#fff' : i < activeStep ? '#10B981' : '#475569',
-                      }}
-                    >
-                      {node.label}
-                    </p>
-                    <p
-                      className="text-[8px] mt-1 font-bold tracking-widest uppercase opacity-60"
-                      style={{ color: i === activeStep ? '#10B981' : '#94a3b8' }}
-                    >
-                      {node.sublabel}
-                    </p>
+                    <div className="flex flex-col items-center gap-1.5">
+                      {node.label === 'HASHKEY CHAIN' && (
+                        <div className="w-8 h-8 shrink-0 flex items-center justify-center bg-white rounded-full overflow-hidden mb-1.5 shadow-lg shadow-white/5">
+                          <svg viewBox="144 71 48 48" className="w-full h-full p-0.5">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M154.442 80.3881L161.75 82.0454C161.84 82.0622 161.902 82.1409 161.902 82.2307V107.915C161.902 108.005 161.835 108.089 161.745 108.106L154.436 109.612C154.313 109.64 154.2 109.544 154.2 109.421V80.5791C154.2 80.4555 154.318 80.36 154.442 80.3881ZM181.559 80.3881L174.25 82.0454C174.16 82.0622 174.098 82.1409 174.098 82.2307V107.915C174.098 108.005 174.166 108.089 174.256 108.106L181.564 109.612C181.688 109.64 181.8 109.544 181.8 109.421V80.5791C181.8 80.4555 181.682 80.36 181.559 80.3881ZM171.851 91.2249V98.5898V98.7583H171.683H164.318H164.149V98.5898V91.2249V91.0563H164.318H171.683H171.851V91.2249Z" fill="black"/>
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M161.119 82.7051L154.983 81.3138V108.7L161.119 107.436V82.7051ZM174.881 82.7051V107.436L181.017 108.7V81.3138L174.881 82.7051ZM161.75 82.0454C161.84 82.0622 161.902 82.1409 161.902 82.2307V107.915C161.84 82.0622 161.902 82.1409 161.902 82.2307V107.915C161.84 82.0622 161.902 82.1409 161.902 82.2307V107.915ZM171.068 97.9753V91.8394H164.932V97.9753H171.068ZM164.149 98.7583V91.0563H171.851V98.7583H164.149Z" fill="black"/>
+                          </svg>
+                        </div>
+                      )}
+                      <p
+                        className="text-[11px] font-black tracking-widest uppercase"
+                        style={{
+                          color: i === activeStep ? '#fff' : i < activeStep ? '#10B981' : '#475569',
+                        }}
+                      >
+                        {node.label}
+                      </p>
+                      <p
+                        className="text-[8px] mt-1 font-bold tracking-widest uppercase opacity-60"
+                        style={{ color: i === activeStep ? '#10B981' : '#94a3b8' }}
+                      >
+                        {node.sublabel}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Connector line */}
@@ -172,7 +182,7 @@ export default function HowItWorks() {
                   )}
                 </div>
               ))}
-
+            </div>
           </div>
 
         </div>
