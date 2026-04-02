@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Background from "@/components/Background";
 import Hero from "@/components/Hero";
+import LoanTiers from "@/components/LoanTiers";
 import HowItWorks from "@/components/HowItWorks";
 import SplashLoader from "@/components/SplashLoader";
 
@@ -12,7 +13,7 @@ export default function Home() {
       <Background />
       <Hero />
       <HowItWorks />
-      
+      <LoanTiers />
       {/* Footer / Secondary sections */}
       <footer className="relative py-16 px-6 border-t border-white/5 bg-[#020617]/80 backdrop-blur-md text-center">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">

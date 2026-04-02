@@ -62,7 +62,7 @@ export default function HowItWorks() {
   }, []);
 
   return (
-    <section className="relative py-48 px-8 bg-[#020617]/40 backdrop-blur-sm">
+    <section className="relative py-30 px-8 bg-[#020617]/40 backdrop-blur-sm">
       <div className="max-w-6xl mx-auto">
 
         {/* Section heading */}
@@ -75,7 +75,7 @@ export default function HowItWorks() {
 
         <div className="flex flex-col lg:flex-row gap-20 items-start">
 
-          {/* LEFT — Steps */}
+          {/* LEFT -- Steps (scrollable) */}
           <div className="flex-1 space-y-32">
             {steps.map((step, i) => (
               <div
@@ -105,72 +105,74 @@ export default function HowItWorks() {
             ))}
           </div>
 
-          {/* RIGHT — Animated Flow Diagram */}
-          <div className="hidden lg:flex w-96 sticky top-48 flex-col items-center">
-            {flowNodes.map((node, i) => (
-              <div key={i} className="flex flex-col items-center w-full">
+          {/* RIGHT -- Compact Sticky Flow Diagram */}
+          <div className="hidden lg:flex w-80 sticky top-24 self-start flex-col items-center">
 
-                {/* Node box */}
-                <div
-                  className="w-full rounded-2xl px-6 py-5 text-center transition-all duration-700 backdrop-blur-xl shadow-2xl"
-                  style={{
-                    background: i === activeStep
-                      ? 'rgba(16,185,129,0.15)'
-                      : i < activeStep
-                      ? 'rgba(16,185,129,0.05)'
-                      : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${
-                      i === activeStep
-                        ? '#10B981'
-                        : i < activeStep
-                        ? 'rgba(16,185,129,0.3)'
-                        : 'rgba(255,255,255,0.05)'
-                    }`,
-                    opacity: i > activeStep ? 0.4 : 1,
-                    transform: i === activeStep ? 'scale(1.05)' : 'scale(1)',
-                    boxShadow: i === activeStep ? '0 0 30px rgba(16,185,129,0.15)' : 'none',
-                  }}
-                >
-                  <p
-                    className="text-sm font-black tracking-widest uppercase"
+              {flowNodes.map((node, i) => (
+                <div key={i} className="flex flex-col items-center w-full">
+
+                  {/* Node box */}
+                  <div
+                    className="w-full rounded-xl px-4 py-3 text-center transition-all duration-700 backdrop-blur-xl"
                     style={{
-                      color: i === activeStep ? '#fff' : i < activeStep ? '#10B981' : '#475569',
+                      background: i === activeStep
+                        ? 'rgba(16,185,129,0.15)'
+                        : i < activeStep
+                        ? 'rgba(16,185,129,0.05)'
+                        : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${
+                        i === activeStep
+                          ? '#10B981'
+                          : i < activeStep
+                          ? 'rgba(16,185,129,0.3)'
+                          : 'rgba(255,255,255,0.05)'
+                      }`,
+                      opacity: i > activeStep ? 0.35 : 1,
+                      transform: i === activeStep ? 'scale(1.03)' : 'scale(1)',
+                      boxShadow: i === activeStep ? '0 0 20px rgba(16,185,129,0.15)' : 'none',
                     }}
                   >
-                    {node.label}
-                  </p>
-                  <p
-                    className="text-[10px] mt-1.5 font-bold tracking-widest uppercase opacity-60"
-                    style={{ color: i === activeStep ? '#10B981' : '#94a3b8' }}
-                  >
-                    {node.sublabel}
-                  </p>
-                </div>
-
-                {/* Connector line — NOT after last node */}
-                {i < flowNodes.length - 1 && (
-                  <div className="w-px h-14 relative overflow-hidden my-1">
-                    {/* Background dashed line */}
-                    <div
-                      className="absolute inset-x-0 h-full w-full"
+                    <p
+                      className="text-[11px] font-black tracking-widest uppercase"
                       style={{
-                        background:
-                          'repeating-linear-gradient(to bottom, rgba(16,185,129,0.2) 0px, rgba(16,185,129,0.2) 6px, transparent 6px, transparent 12px)',
+                        color: i === activeStep ? '#fff' : i < activeStep ? '#10B981' : '#475569',
                       }}
-                    />
-                    {/* Animated fill line */}
-                    <div
-                      className="absolute top-0 left-0 w-full transition-all duration-1000 ease-in-out"
-                      style={{
-                        height: i < activeStep ? '100%' : i === activeStep ? '50%' : '0%',
-                        background: '#10B981',
-                        boxShadow: '0 0 10px #10B981',
-                      }}
-                    />
+                    >
+                      {node.label}
+                    </p>
+                    <p
+                      className="text-[8px] mt-1 font-bold tracking-widest uppercase opacity-60"
+                      style={{ color: i === activeStep ? '#10B981' : '#94a3b8' }}
+                    >
+                      {node.sublabel}
+                    </p>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Connector line */}
+                  {i < flowNodes.length - 1 && (
+                    <div className="w-px h-8 relative overflow-hidden my-0.5">
+                      {/* Background dashed line */}
+                      <div
+                        className="absolute inset-x-0 h-full w-full"
+                        style={{
+                          background:
+                            'repeating-linear-gradient(to bottom, rgba(16,185,129,0.2) 0px, rgba(16,185,129,0.2) 4px, transparent 4px, transparent 8px)',
+                        }}
+                      />
+                      {/* Animated fill line */}
+                      <div
+                        className="absolute top-0 left-0 w-full transition-all duration-1000 ease-in-out"
+                        style={{
+                          height: i < activeStep ? '100%' : i === activeStep ? '50%' : '0%',
+                          background: '#10B981',
+                          boxShadow: '0 0 8px #10B981',
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+
           </div>
 
         </div>
