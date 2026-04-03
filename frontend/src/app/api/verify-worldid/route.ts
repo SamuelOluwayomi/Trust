@@ -3,18 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const idkitResponse = await req.json();
+    const proof = await req.json();
+    const rp_id = process.env.NEXT_PUBLIC_WORLDCOIN_RP_ID;
 
-    // In World ID v4, we use the v4 verify endpoint
-    // The identifier in the URL is typically your app_id (unless you have a custom rp_id)
-    const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID;
-    
     const response = await fetch(
-      `https://developer.world.org/api/v4/verify/${appId}`,
+      `https://developer.world.org/api/v4/verify/${rp_id}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(idkitResponse),
+        body: JSON.stringify(proof),
       }
     );
 
@@ -23,10 +20,9 @@ export async function POST(req: NextRequest) {
     if (response.ok) {
       return NextResponse.json({ success: true, ...data });
     } else {
-      return NextResponse.json({ success: false, error: data }, { status: response.status });
+      return NextResponse.json({ success: false, error: data }, { status: response.status || 400 });
     }
-  } catch (err) {
-    console.error("Verification error:", err);
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message || "Server error" }, { status: 500 });
   }
 }

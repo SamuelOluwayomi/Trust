@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IDKitRequestWidget, orbLegacy, type IDKitResult } from "@worldcoin/idkit";
+import { IDKitRequestWidget, orbLegacy, type IDKitResult, type RpContext } from "@worldcoin/idkit";
 
 interface Props {
   onVerified: (nullifierHash: string) => void;
@@ -9,6 +9,42 @@ interface Props {
 
 export default function WorldIDVerify({ onVerified }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [rpContext, setRpContext] = useState<RpContext | null>(null);
+
+  const handleOpen = async () => {
+    try {
+      setIsInitializing(true);
+      
+      // 1. Get RP Signature from backend
+      const res = await fetch("/api/rp-signature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: process.env.NEXT_PUBLIC_WORLDCOIN_ACTION }),
+      });
+
+      if (!res.ok) throw new Error("Failed to get RP signature");
+      
+      const sigData = await res.json();
+      
+      // 2. Set RP Context
+      setRpContext({
+        rp_id: process.env.NEXT_PUBLIC_WORLDCOIN_RP_ID!,
+        nonce: sigData.nonce,
+        created_at: sigData.created_at,
+        expires_at: sigData.expires_at,
+        signature: sigData.sig,
+      });
+
+      // 3. Open Widget
+      setIsOpen(true);
+    } catch (err) {
+      console.error("Initialization failed:", err);
+      alert("Failed to initialize World ID. Please check your connection.");
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   const handleVerify = async (result: IDKitResult) => {
     const res = await fetch("/api/verify-worldid", {
@@ -16,17 +52,16 @@ export default function WorldIDVerify({ onVerified }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(result),
     });
+
     if (!res.ok) {
       const data = await res.json();
-      throw new Error(data.error?.message || "Verification failed.");
+      throw new Error(data.error?.detail || "Verification failed on server.");
     }
   };
 
   const onSuccess = (result: IDKitResult) => {
-    // In v4, the nullifier is inside the responses array
-    const response = result.responses?.[0];
-    const nullifier = response && 'nullifier' in response ? response.nullifier : null;
-    
+    // In v4 uniqueness proofs, we check the first response for the nullifier
+    const nullifier = "responses" in result ? result.responses[0]?.nullifier : null;
     if (nullifier) {
       onVerified(nullifier);
     }
@@ -36,37 +71,34 @@ export default function WorldIDVerify({ onVerified }: Props) {
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
-        className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-white/10 bg-white/3 hover:bg-white/6 text-white/70 hover:text-white text-sm transition-all shadow-sm"
+        onClick={handleOpen}
+        disabled={isInitializing}
+        className={`w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-white/10 bg-white/3 hover:bg-white/6 text-white/70 hover:text-white text-sm transition-all shadow-sm ${
+          isInitializing ? "opacity-50 cursor-not-allowed" : ""
+        }`}
       >
         <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-          <circle cx="14" cy="14" r="13" stroke="#10b981" strokeWidth="1.5"/>
-          <circle cx="14" cy="14" r="6" stroke="#10b981" strokeWidth="1.5"/>
-          <circle cx="14" cy="14" r="2" fill="#10b981"/>
+          <circle cx="14" cy="14" r="13" stroke="#10b981" strokeWidth="1.5" />
+          <circle cx="14" cy="14" r="6" stroke="#10b981" strokeWidth="1.5" />
+          <circle cx="14" cy="14" r="2" fill="#10b981" />
         </svg>
-        Verify with World ID
+        {isInitializing ? "Initializing..." : "Verify with World ID"}
       </button>
 
-      {/* @ts-ignore IDKit v4 types can be strict with rp_context signatures; forcing staging mode for hackathon testing */}
-      <IDKitRequestWidget
-        app_id={process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID as `app_${string}`}
-        action={process.env.NEXT_PUBLIC_WORLDCOIN_ACTION!}
-        preset={orbLegacy()}
-        environment="staging"
-        allow_legacy_proofs={true}
-        rp_context={{
-          rp_id: "rp_e2bb8c52d7e69e85", 
-          nonce: Math.random().toString(36).substring(7),
-          created_at: Math.floor(Date.now() / 1000),
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
-          signature: "0x",
-        }}
-        handleVerify={handleVerify}
-        onSuccess={onSuccess}
-        open={isOpen}
-        onOpenChange={setIsOpen}
-        autoClose
-      />
+      {rpContext && (
+        <IDKitRequestWidget
+          app_id={process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID as `app_${string}`}
+          action={process.env.NEXT_PUBLIC_WORLDCOIN_ACTION!}
+          rp_context={rpContext}
+          preset={orbLegacy()}
+          allow_legacy_proofs={true}
+          handleVerify={handleVerify}
+          onSuccess={onSuccess}
+          open={isOpen}
+          onOpenChange={setIsOpen}
+          autoClose
+        />
+      )}
     </>
   );
 }
