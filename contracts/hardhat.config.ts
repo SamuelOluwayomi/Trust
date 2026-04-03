@@ -5,6 +5,9 @@ dotenv.config();
 
 export default defineConfig({
   solidity: "0.8.28",
+  paths: {
+    sources: ["./contracts"],
+  },
   networks: {
     hashkey_testnet: {
       type: "http",
