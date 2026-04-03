@@ -2,25 +2,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const proof = await req.json();
+  try {
+    const idkitResponse = await req.json();
 
-  const response = await fetch(
-    `https://developer.worldcoin.org/api/v2/verify/${process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...proof,
-        action: process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
-      }),
+    // In World ID v4, we use the v4 verify endpoint
+    // The identifier in the URL is typically your app_id (unless you have a custom rp_id)
+    const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID;
+    
+    const response = await fetch(
+      `https://developer.world.org/api/v4/verify/${appId}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(idkitResponse),
+      }
+    );
+
+    const data = await response.json();
+
+    if (response.ok) {
+      return NextResponse.json({ success: true, ...data });
+    } else {
+      return NextResponse.json({ success: false, error: data }, { status: response.status });
     }
-  );
-
-  if (response.ok) {
-    const data = await response.json();
-    return NextResponse.json({ success: true, ...data });
-  } else {
-    const data = await response.json();
-    return NextResponse.json({ success: false, error: data }, { status: 400 });
+  } catch (err) {
+    console.error("Verification error:", err);
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
