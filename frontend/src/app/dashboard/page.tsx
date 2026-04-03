@@ -9,6 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 
 // --- Stub Data ---
 const statsData = [
@@ -39,6 +40,16 @@ const tableData = [
 ];
 
 export default function DashboardPage() {
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
+
+  const walletAddress = wallets[0]?.address;
+  const truncatedAddress = walletAddress
+    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+    : "Not connected";
+
+  const userEmail = user?.google?.email || user?.email?.address || null;
+
   return (
     <div className="space-y-6 pb-12">
       
@@ -59,6 +70,7 @@ export default function DashboardPage() {
                 <h2 className="text-lg font-black tracking-widest text-white uppercase">ZK Proof Active</h2>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed max-w-sm mb-6">
+                Connected as <span className="text-white font-bold">{userEmail || truncatedAddress}</span>. 
                 Your financial credentials have been verified locally. You unlocked the <strong className="text-emerald-400">Silver Tier</strong> without exposing any sensitive data.
               </p>
             </div>

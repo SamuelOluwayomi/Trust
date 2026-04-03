@@ -4,9 +4,26 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { ShieldCheckIcon, CompassIcon, GithubLogoIcon, BookOpenIcon, SignInIcon, UserPlusIcon, ListIcon, XIcon } from "@phosphor-icons/react";
+import { usePrivy } from "@privy-io/react-auth";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { login, logout, authenticated } = usePrivy();
+  const router = useRouter();
+
+  const handleAuth = () => {
+    if (authenticated) {
+      router.push("/dashboard");
+    } else {
+      login();
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
+  };
 
   const navLinks = [
     { label: "Dashboard", icon: CompassIcon, href: "#dashboard" },
@@ -60,15 +77,40 @@ export default function Navbar() {
 
         {/* Right: Actions (Desktop only) */}
         <div className="hidden md:flex items-center gap-2 bg-[#020617]/30 backdrop-blur-3xl px-2 py-2 rounded-full shadow-2xl border border-white/10">
-          <button className="flex items-center gap-2 px-5 py-2.5 text-[11px] font-bold text-white/60 hover:text-white transition-all duration-300 tracking-widest uppercase rounded-full hover:bg-white/10">
-            <SignInIcon className="w-4 h-4" weight="bold" />
-            Login
-          </button>
-          <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-[#020617] text-[11px] font-extrabold px-6 py-2.5 rounded-full transition-all duration-300 hover:scale-[1.05] active:scale-95 shadow-lg shadow-emerald-500/20 tracking-widest uppercase">
-            <UserPlusIcon className="w-4 h-4" weight="bold" />
-            Register
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          {authenticated ? (
+            <>
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="flex items-center gap-2 px-5 py-2.5 text-[11px] font-bold text-white/60 hover:text-white transition-all duration-300 tracking-widest uppercase rounded-full hover:bg-white/10"
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-[11px] font-extrabold px-6 py-2.5 rounded-full transition-all duration-300 tracking-widest uppercase border border-red-500/20"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={login}
+                className="flex items-center gap-2 px-5 py-2.5 text-[11px] font-bold text-white/60 hover:text-white transition-all duration-300 tracking-widest uppercase rounded-full hover:bg-white/10"
+              >
+                <SignInIcon className="w-4 h-4" weight="bold" />
+                Login
+              </button>
+              <button
+                onClick={login}
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-[#020617] text-[11px] font-extrabold px-6 py-2.5 rounded-full transition-all duration-300 hover:scale-[1.05] active:scale-95 shadow-lg shadow-emerald-500/20 tracking-widest uppercase"
+              >
+                <UserPlusIcon className="w-4 h-4" weight="bold" />
+                Register
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Mobile: Hamburger toggle */}
@@ -134,25 +176,64 @@ export default function Navbar() {
 
               {/* Actions */}
               <div className="p-3 space-y-2">
-                <motion.button
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2, duration: 0.3 }}
-                  className="w-full flex items-center justify-center gap-2 px-5 py-3 text-[11px] font-bold text-white/60 hover:text-white transition-all duration-300 tracking-widest uppercase rounded-xl hover:bg-white/6"
-                >
-                  <SignInIcon className="w-4 h-4" weight="bold" />
-                  Login
-                </motion.button>
-                <motion.button
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.25, duration: 0.3 }}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-[#020617] text-[11px] font-extrabold px-6 py-3 rounded-xl transition-all duration-300 active:scale-95 shadow-lg shadow-emerald-500/20 tracking-widest uppercase"
-                >
-                  <UserPlusIcon className="w-4 h-4" weight="bold" />
-                  Register
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </motion.button>
+                {authenticated ? (
+                  <>
+                    <motion.button
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2, duration: 0.3 }}
+                      onClick={() => {
+                        setMobileOpen(false);
+                        router.push("/dashboard");
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3 text-[11px] font-bold text-white/60 hover:text-white transition-all duration-300 tracking-widest uppercase rounded-xl hover:bg-white/6"
+                    >
+                      Dashboard
+                    </motion.button>
+                    <motion.button
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.25, duration: 0.3 }}
+                      onClick={() => {
+                        setMobileOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-[11px] font-extrabold px-6 py-3 rounded-xl transition-all duration-300 active:scale-95 shadow-lg shadow-red-500/20 tracking-widest uppercase border border-red-500/20"
+                    >
+                      Sign Out
+                    </motion.button>
+                  </>
+                ) : (
+                  <>
+                    <motion.button
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2, duration: 0.3 }}
+                      onClick={() => {
+                        setMobileOpen(false);
+                        login();
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3 text-[11px] font-bold text-white/60 hover:text-white transition-all duration-300 tracking-widest uppercase rounded-xl hover:bg-white/6"
+                    >
+                      <SignInIcon className="w-4 h-4" weight="bold" />
+                      Login
+                    </motion.button>
+                    <motion.button
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.25, duration: 0.3 }}
+                      onClick={() => {
+                        setMobileOpen(false);
+                        login();
+                      }}
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-[#020617] text-[11px] font-extrabold px-6 py-3 rounded-xl transition-all duration-300 active:scale-95 shadow-lg shadow-emerald-500/20 tracking-widest uppercase"
+                    >
+                      <UserPlusIcon className="w-4 h-4" weight="bold" />
+                      Register
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </motion.button>
+                  </>
+                )}
               </div>
             </motion.div>
           </>

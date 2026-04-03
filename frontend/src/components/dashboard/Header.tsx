@@ -1,8 +1,17 @@
 "use client";
 
 import { Bell, MagnifyingGlass, Wallet } from "@phosphor-icons/react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 
 export default function Header() {
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
+
+  const walletAddress = wallets[0]?.address;
+  const truncatedAddress = walletAddress
+    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+    : "Not connected";
+
   return (
     <header className="h-20 lg:ml-64 bg-[#0a0f1e]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-8 sticky top-0 z-30">
       
@@ -42,7 +51,7 @@ export default function Header() {
         {/* Profile / Wallet */}
         <div className="flex items-center gap-3 pl-6 border-l border-white/10">
           <div className="flex-col items-end hidden md:flex">
-            <span className="text-xs font-bold text-white">0x71C...49A2</span>
+            <span className="text-xs font-bold text-white">{truncatedAddress}</span>
             <span className="text-[10px] text-emerald-400 font-medium">Connected</span>
           </div>
           <button className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center border-2 border-[#0a0f1e] shadow-[0_0_0_2px_rgba(255,255,255,0.1)]">
