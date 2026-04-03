@@ -56,6 +56,7 @@ export default function WorldIDVerify({ onVerified }: Props) {
       <IDKitRequestWidget
         app_id={process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID as `app_${string}`}
         action={process.env.NEXT_PUBLIC_WORLDCOIN_ACTION!}
+        preset={"modal" as any}
         handleVerify={handleVerify}
         onSuccess={onSuccess}
         open={isOpen}

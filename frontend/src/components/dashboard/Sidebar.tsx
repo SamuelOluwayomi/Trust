@@ -11,26 +11,27 @@ import {
   Certificate,
   Gear,
   PaperPlaneRight,
+  X,
 } from "@phosphor-icons/react";
 
 const MENU_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: SquaresFour },
-  { label: "My Loans", href: "/dashboard/loans", icon: Wallet },
-  { label: "Borrow", href: "/dashboard/borrow", icon: HandCoins },
-  { label: "ZK Proof", href: "/dashboard/proof", icon: ShieldCheck },
+  { label: "My Loans", href: "#", icon: Wallet },
+  { label: "Borrow", href: "#", icon: HandCoins },
+  { label: "ZK Proof", href: "#", icon: ShieldCheck },
 ];
 
 const FINANCIAL_ITEMS = [
-  { label: "Repayment History", href: "/dashboard/history", icon: ClockCounterClockwise },
-  { label: "Soulbound Tokens", href: "/dashboard/sbt", icon: Certificate },
+  { label: "Repayment History", href: "#", icon: ClockCounterClockwise },
+  { label: "Soulbound Tokens", href: "#", icon: Certificate },
 ];
 
 const TOOLS_ITEMS = [
-  { label: "Settings", href: "/dashboard/settings", icon: Gear },
-  { label: "Telegram Bot", href: "/dashboard/bot", icon: PaperPlaneRight },
+  { label: "Settings", href: "#", icon: Gear },
+  { label: "Telegram Bot", href: "https://t.me/Tru3t_Bot", icon: PaperPlaneRight },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const pathname = usePathname();
 
   const NavItem = ({ item }: { item: any }) => {
@@ -39,11 +40,16 @@ export default function Sidebar() {
     return (
       <Link
         href={item.href}
+        target={item.href.startsWith("http") ? "_blank" : undefined}
+        rel={item.href.startsWith("http") ? "noopener noreferrer" : undefined}
         className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
           isActive
             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)]"
             : "text-slate-400 hover:bg-white/5 hover:text-white"
         }`}
+        onClick={() => {
+          if (window.innerWidth < 1024 && onClose) onClose();
+        }}
       >
         <item.icon
           className={`w-5 h-5 ${isActive ? "text-emerald-400" : "text-slate-500"}`}
@@ -55,14 +61,31 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-[#050914] border-r border-white/5 overflow-y-auto z-40 hidden lg:flex flex-col">
-      {/* Brand */}
-      <div className="flex items-center gap-3 px-6 h-20 border-b border-white/5 shrink-0">
-        <img src="/shield.svg" alt="Trust Logo" className="w-6 h-6 object-contain drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-        <span className="text-xl font-black tracking-widest text-white uppercase mt-0.5">
-          Trust<span className="text-emerald-500">.</span>
-        </span>
-      </div>
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-[#020617]/80 backdrop-blur-sm z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar Area */}
+      <aside className={`fixed left-0 top-0 bottom-0 w-64 bg-[#050914] border-r border-white/5 overflow-y-auto z-50 flex flex-col transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        
+        {/* Brand */}
+        <div className="flex items-center justify-between gap-3 px-6 h-20 border-b border-white/5 shrink-0">
+          <div className="flex items-center gap-3">
+            <img src="/shield.svg" alt="Trust Logo" className="w-6 h-6 object-contain drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <span className="text-xl font-black tracking-widest text-white uppercase mt-0.5">
+              Trust<span className="text-emerald-500">.</span>
+            </span>
+          </div>
+          {/* Close button for mobile */}
+          <button onClick={onClose} className="lg:hidden p-2 -mr-2 text-slate-400 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
       <div className="flex-1 px-4 py-8 space-y-8 overflow-y-auto">
         {/* Menu Section */}
@@ -107,5 +130,6 @@ export default function Sidebar() {
       </div>
 
     </aside>
+    </>
   );
 }

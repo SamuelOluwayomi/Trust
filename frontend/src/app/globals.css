@@ -30,3 +30,23 @@ html {
   background: rgba(16, 185, 129, 0.3);
   color: #F8FAFC;
 }
+
+/* Custom Scrollbar - Emerald Theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050914; /* Dark matching dashboard */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #10B981; /* Brand Emerald */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #059669; /* Darker Emerald on hover */
+}
