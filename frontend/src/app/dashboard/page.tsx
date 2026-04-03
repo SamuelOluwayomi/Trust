@@ -52,7 +52,7 @@ export default function DashboardPage() {
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
     : "Not connected";
 
-  const { profile, loading: profileLoading, isVerified } = useUserProfile();
+  const { profile, loading: profileLoading, isVerified, verify } = useUserProfile();
   const { borrow, repay, isBorrowing, isRepaying } = useLending();
   const { loans, transactions, loading: dashboardLoading } = useDashboardData();
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
                 </>
               ) : (
                 <div className="w-full max-w-[200px]">
-                  <WorldIDVerify onVerified={() => window.location.reload()} />
+                  <WorldIDVerify onVerified={verify} />
                 </div>
               )}
             </div>

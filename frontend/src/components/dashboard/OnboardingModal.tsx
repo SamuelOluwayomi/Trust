@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { supabase } from "@/lib/supabase";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import WorldIDVerify from "@/components/WorldIDVerify";
 
 const ONBOARDING_KEY = "trust_onboarding_completed";
@@ -54,6 +55,7 @@ export default function OnboardingModal() {
 
   const { user } = usePrivy();
   const { wallets } = useWallets();
+  const { verify } = useUserProfile();
   const walletAddress = wallets[0]?.address;
 
   useEffect(() => {
@@ -70,14 +72,10 @@ export default function OnboardingModal() {
     setVerified(true);
     setSaving(true);
     try {
-      await supabase.from("users").upsert({
-        wallet_address: walletAddress ?? null,
-        privy_id: user?.id ?? null,
-        worldid_nullifier: nullifier,
-        created_at: new Date().toISOString(),
-      });
+      await verify(nullifier);
     } catch (err) {
       console.error("Failed to save user:", err);
+      setVerified(false);
     } finally {
       setSaving(false);
     }
