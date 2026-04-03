@@ -61,7 +61,16 @@ export default function WorldIDVerify({ onVerified }: Props) {
 
   const onSuccess = (result: IDKitResult) => {
     // In v4 uniqueness proofs, we check the first response for the nullifier
-    const nullifier = "responses" in result ? result.responses[0]?.nullifier : null;
+    let nullifier = null;
+    
+    if (result.protocol_version === "4.0" && !("session_id" in result)) {
+      // It's a v4 uniqueness proof
+      nullifier = (result as any).responses[0]?.nullifier;
+    } else if (result.protocol_version === "3.0") {
+      // It's a v3 uniqueness proof
+      nullifier = (result as any).responses[0]?.nullifier;
+    }
+
     if (nullifier) {
       onVerified(nullifier);
     }
@@ -92,6 +101,7 @@ export default function WorldIDVerify({ onVerified }: Props) {
           rp_context={rpContext}
           preset={orbLegacy()}
           allow_legacy_proofs={true}
+          environment="staging" // Set to "staging" for testing with the simulator
           handleVerify={handleVerify}
           onSuccess={onSuccess}
           open={isOpen}
