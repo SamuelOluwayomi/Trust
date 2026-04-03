@@ -2,14 +2,42 @@
 
 import { Bell, MagnifyingGlass, Wallet, List } from "@phosphor-icons/react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { ShieldCheck, Certificate } from "@phosphor-icons/react";
 
 export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const { transactions } = useDashboardData();
+  const { transactions, loans } = useDashboardData();
+  const { isVerified } = useUserProfile();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Sync internal state with URL on mount or change
+  useEffect(() => {
+    setSearchValue(searchParams.get("q") || "");
+  }, [searchParams]);
+
+  const handleSearch = (val: string) => {
+    setSearchValue(val);
+    const params = new URLSearchParams(searchParams.toString());
+    if (val) {
+      params.set("q", val);
+    } else {
+      params.delete("q");
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const currentTier = isVerified ? "Bronze" : "None";
+  const sbtCount = loans.filter(l => l.status === "Repaid").length;
 
   const walletAddress = wallets[0]?.address;
   const truncatedAddress = walletAddress
@@ -32,6 +60,8 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           <input 
             type="text" 
             placeholder="Search dashboard..." 
+            value={searchValue}
+            onChange={(e) => handleSearch(e.target.value)}
             className="w-full bg-[#050914] border border-white/5 rounded-full py-2 pl-10 pr-4 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50 transition-colors"
           />
         </div>
@@ -41,14 +71,17 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
       <div className="flex items-center gap-6">
         
         {/* Tier Badge */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 border border-slate-700/50">
-          <span className="w-2 h-2 rounded-full bg-slate-400" />
-          <span className="text-[10px] font-bold tracking-widest text-slate-300 uppercase">Silver Tier</span>
+        <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors ${
+          isVerified ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800/50 border-slate-700/50 text-slate-400'
+        }`}>
+          <ShieldCheck className="w-3.5 h-3.5" weight={isVerified ? "fill" : "regular"} />
+          <span className="text-[10px] font-bold tracking-widest uppercase">{currentTier} Tier</span>
         </div>
 
         {/* SBT Count */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-          <span className="text-xs font-black">2</span>
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+          <Certificate className="w-3.5 h-3.5" weight="fill" />
+          <span className="text-xs font-black">{sbtCount}</span>
           <span className="text-[10px] font-bold tracking-widest uppercase opacity-80">SBTs</span>
         </div>
 

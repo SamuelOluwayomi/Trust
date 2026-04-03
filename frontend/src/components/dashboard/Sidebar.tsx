@@ -12,7 +12,9 @@ import {
   Gear,
   PaperPlaneRight,
   X,
+  SignOut,
 } from "@phosphor-icons/react";
+import { usePrivy } from "@privy-io/react-auth";
 
 const MENU_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: SquaresFour },
@@ -33,6 +35,7 @@ const TOOLS_ITEMS = [
 
 export default function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const pathname = usePathname();
+  const { logout } = usePrivy();
 
   const NavItem = ({ item }: { item: any }) => {
     const isActive = pathname === item.href;
@@ -115,6 +118,15 @@ export default function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean,
             {TOOLS_ITEMS.map((item) => (
               <NavItem key={item.label} item={item} />
             ))}
+            
+            {/* Logout Button */}
+            <button
+              onClick={() => logout()}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-400/70 hover:bg-red-500/5 hover:text-red-400 transition-all duration-300"
+            >
+              <SignOut className="w-5 h-5 text-red-400/70" weight="regular" />
+              Logout
+            </button>
           </div>
         </div>
       </div>

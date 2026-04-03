@@ -10,6 +10,7 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useSearchParams } from "next/navigation";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLending } from "@/hooks/useLending";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -55,11 +56,25 @@ export default function DashboardPage() {
   const { profile, loading: profileLoading, isVerified, verify } = useUserProfile();
   const { borrow, repay, isBorrowing, isRepaying } = useLending();
   const { loans, transactions, loading: dashboardLoading } = useDashboardData();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get("q")?.toLowerCase() || "";
 
   const userEmail = user?.google?.email || user?.email?.address || null;
 
   const currentTier = isVerified ? "Bronze" : "None";
   
+  // Filtering Logic
+  const filteredLoans = loans.filter(l => 
+    l.tier.toLowerCase().includes(searchQuery) || 
+    l.status.toLowerCase().includes(searchQuery) ||
+    l.amount.toString().includes(searchQuery)
+  );
+
+  const filteredTransactions = transactions.filter(tx => 
+    tx.type.toLowerCase().includes(searchQuery) || 
+    tx.amount.toString().includes(searchQuery)
+  );
+
   const totalBorrowedAmount = loans.reduce((acc, loan) => acc + Number(loan.amount), 0);
   const totalDueAmount = loans.reduce((acc, loan) => acc + (Number(loan.amount) - Number(loan.amount_paid)), 0);
   const activeLoan = loans.find(l => l.status === 'Active');
@@ -324,7 +339,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {loans.slice().sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((loan) => (
+              {filteredLoans.slice().sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((loan) => (
                 <tr key={loan.id} className="hover:bg-white/2 transition-colors">
                   <td className="px-6 py-4 text-xs font-medium text-slate-300">{new Date(loan.created_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4 text-xs font-bold text-white">{loan.amount} HSK</td>
@@ -337,9 +352,11 @@ export default function DashboardPage() {
                   <td className="px-6 py-4 text-xs font-mono text-slate-500">{loan.status === 'Repaid' ? '#0142' : 'Pending'}</td>
                 </tr>
               ))}
-              {loans.length === 0 && (
+              {filteredLoans.length === 0 && (
                 <tr>
-                   <td colSpan={5} className="px-6 py-8 text-center text-slate-500 text-sm">No transaction history found.</td>
+                   <td colSpan={5} className="px-6 py-8 text-center text-slate-500 text-sm">
+                     {searchQuery ? "No matching records found." : "No transaction history found."}
+                   </td>
                 </tr>
               )}
             </tbody>
