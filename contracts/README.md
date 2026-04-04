@@ -1,57 +1,60 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# Trust: Smart Contracts
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+This directory contains the core smart contracts for the **Trust** undercollateralized lending protocol, built on the **HashKey Chain**.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## 🏦 Core Contracts
 
-## Project Overview
+### 1. `LoanManager.sol`
+The central logic contract for the protocol. It handles:
+- Loan requests and approvals.
+- Collateral management.
+- Interest calculation and repayments.
+- Dynamic borrowing limits based on user "Trust Scores" (SBT balance).
 
-This example project includes:
+### 2. `LoanSBT.sol`
+A Soul-Bound Token (ERC-721 based) that serves as a non-transferable credit identity.
+- Stores user reputation and credit history.
+- Minted upon World ID verification.
+- Metadata is updated dynamically based on repayment behavior.
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+### 3. `Faucet.sol`
+A utility contract for testnet users to claim mock tokens (USDT/USDC) for testing the lending features on the HashKey Testnet.
 
-## Usage
+## 🛠️ Setup & Deployment
 
-### Running Tests
+### Installation
+```bash
+npm install
+```
 
-To run all the tests in the project, execute the following command:
+### Environment Configuration
+Create a `.env` file in this directory with the following:
+```env
+HASHKEY_TESTNET_RPC_URL=https://hashkey-testnet.rpc
+PRIVATE_KEY=your_private_key_here
+ETHERSCAN_API_KEY=your_etherscan_key (optional)
+```
 
-```shell
+### Compilation
+```bash
+npx hardhat compile
+```
+
+### Deployment to HashKey Testnet
+```bash
+npx hardhat ignition deploy ignition/modules/deploy.ts --network hashkey_testnet
+```
+
+## 🧪 Testing
+Run the test suite using Hardhat:
+```bash
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
-
-```shell
+For Solidity unit tests:
+```bash
 npx hardhat test solidity
-npx hardhat test mocha
 ```
 
-### Make a deployment to Sepolia
-
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+---
+Part of the **Trust Protocol** ecosystem.
