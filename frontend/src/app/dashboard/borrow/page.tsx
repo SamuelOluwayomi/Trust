@@ -25,7 +25,7 @@ export default function BorrowPage() {
     // Pass the real World ID nullifier stored in Supabase
     const success = await borrow(amount, profile?.worldid_nullifier || undefined);
     if (success) {
-      window.location.href = "/dashboard/my-loans";
+      window.location.href = "/dashboard/loans";
     }
   };
 
