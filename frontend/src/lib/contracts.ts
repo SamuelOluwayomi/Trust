@@ -37,9 +37,14 @@ export const LOAN_MANAGER_ABI = [
 
 // Get a provider connected to HashKey testnet via local proxy to bypass browser CORS
 export function getProvider() {
-  // On browser, use our local proxy to avoid CORS. On server, use the direct RPC.
-  const url = typeof window !== 'undefined' ? '/api/rpc' : 'https://testnet.hsk.xyz';
-  return new ethers.JsonRpcProvider(url);
+  // Ethers requires an absolute URL with a protocol (http/https). 
+  // We use our local proxy to avoid CORS issues in the browser.
+  if (typeof window !== 'undefined') {
+    const baseUrl = window.location.origin;
+    return new ethers.JsonRpcProvider(`${baseUrl}/api/rpc`);
+  }
+  // Server-side default
+  return new ethers.JsonRpcProvider('https://testnet.hsk.xyz');
 }
 
 // Get a signer from the browser wallet

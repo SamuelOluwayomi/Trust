@@ -4,19 +4,20 @@ import { useState } from "react";
 import { IDKitRequestWidget, orbLegacy, type IDKitResult, type RpContext } from "@worldcoin/idkit";
 
 interface Props {
-  onVerified: (nullifierHash: string) => void;
+  onVerified: (nullifierHash: string) => Promise<any>;
 }
 
 export default function WorldIDVerify({ onVerified }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [rpContext, setRpContext] = useState<RpContext | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleOpen = async () => {
     try {
       setIsInitializing(true);
+      setError(null);
       
-      // 1. Get RP Signature from backend
       const res = await fetch("/api/rp-signature", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -27,7 +28,6 @@ export default function WorldIDVerify({ onVerified }: Props) {
       
       const sigData = await res.json();
       
-      // 2. Set RP Context
       setRpContext({
         rp_id: process.env.NEXT_PUBLIC_WORLDCOIN_RP_ID!,
         nonce: sigData.nonce,
@@ -36,11 +36,10 @@ export default function WorldIDVerify({ onVerified }: Props) {
         signature: sigData.sig,
       });
 
-      // 3. Open Widget
       setIsOpen(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Initialization failed:", err);
-      alert("Failed to initialize World ID. Please check your connection.");
+      setError("Failed to initialize World ID. Please check your connection.");
     } finally {
       setIsInitializing(false);
     }
@@ -59,26 +58,28 @@ export default function WorldIDVerify({ onVerified }: Props) {
     }
   };
 
-  const onSuccess = (result: IDKitResult) => {
-    // In v4 uniqueness proofs, we check the first response for the nullifier
+  const onSuccess = async (result: IDKitResult) => {
     let nullifier = null;
     
     if (result.protocol_version === "4.0" && !("session_id" in result)) {
-      // It's a v4 uniqueness proof
       nullifier = (result as any).responses[0]?.nullifier;
     } else if (result.protocol_version === "3.0") {
-      // It's a v3 uniqueness proof
       nullifier = (result as any).responses[0]?.nullifier;
     }
 
     if (nullifier) {
-      onVerified(nullifier);
+      try {
+        await onVerified(nullifier);
+        setIsOpen(false);
+      } catch (err: any) {
+        console.error("Post-verification save failed:", err);
+        setError(err.message || "Failed to save verification.");
+      }
     }
-    setIsOpen(false);
   };
 
   return (
-    <>
+    <div className="space-y-3">
       <button
         onClick={handleOpen}
         disabled={isInitializing}
@@ -94,6 +95,12 @@ export default function WorldIDVerify({ onVerified }: Props) {
         {isInitializing ? "Initializing..." : "Verify with World ID"}
       </button>
 
+      {error && (
+        <div className="text-[10px] text-red-400 font-bold tracking-widest uppercase text-center animate-pulse">
+          {error}
+        </div>
+      )}
+
       {rpContext && (
         <IDKitRequestWidget
           app_id={process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID as `app_${string}`}
@@ -101,7 +108,7 @@ export default function WorldIDVerify({ onVerified }: Props) {
           rp_context={rpContext}
           preset={orbLegacy()}
           allow_legacy_proofs={true}
-          environment="staging" // Set to "staging" for testing with the simulator
+          environment="staging"
           handleVerify={handleVerify}
           onSuccess={onSuccess}
           open={isOpen}
@@ -109,6 +116,6 @@ export default function WorldIDVerify({ onVerified }: Props) {
           autoClose
         />
       )}
-    </>
+    </div>
   );
 }

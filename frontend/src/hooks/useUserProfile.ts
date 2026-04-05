@@ -61,17 +61,31 @@ export function useUserProfile() {
     verify: async (nullifier: string) => {
       if (!user) return;
       
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .upsert({
-          privy_id: user.id,
-          wallet_address: user.wallet?.address || wallets[0]?.address || null,
-          worldid_nullifier: nullifier,
-        }, { onConflict: 'privy_id' })
-        .select();
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .upsert({
+            privy_id: user.id,
+            wallet_address: user.wallet?.address || wallets[0]?.address || null,
+            worldid_nullifier: nullifier,
+          }, { onConflict: 'privy_id' })
+          .select();
+          
+        if (userError) {
+          // Handle 409 Conflict / Unique Violation (Error code 23505 in Postgres)
+          if (userError.code === '23505') {
+            throw new Error('This World ID is already linked to another account.');
+          }
+          throw userError;
+        }
         
-      if (userError) throw userError;
-      setProfile(userData && userData.length > 0 ? userData[0] : null);
+        const finalProfile = userData && userData.length > 0 ? userData[0] : null;
+        setProfile(finalProfile);
+        return finalProfile;
+      } catch (err: any) {
+        console.error('Verification save failed:', err);
+        throw err;
+      }
     }
   };
 }
