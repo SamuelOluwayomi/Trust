@@ -7,7 +7,7 @@ const RPC_URLS = [
   "https://rpc.testnet.hsk.xyz",
 ];
 
-const OLD_FAUCET_ADDRESS = "0x7E6a36EBfD76472f0334590Bb83C4F96645fE223";
+const OLD_FAUCET_ADDRESS = "";
 
 async function main() {
   const privateKey = process.env.PRIVATE_KEY;

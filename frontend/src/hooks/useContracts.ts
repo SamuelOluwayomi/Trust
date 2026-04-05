@@ -262,7 +262,7 @@ export function useApplyForLoan() {
     try {
       const contract = await getLoanManagerContractSigned(embeddedWallet);
       const amountWei = ethers.parseEther(amountHSK);
-      const collateral = amountWei / 10n;
+      const collateral = (amountWei * 10n) / 100n;
       const nullifierBytes = ethers.zeroPadValue(ethers.toBeHex(BigInt(nullifierHash)), 32);
 
       const tx = await contract.applyForLoan(amountWei, nullifierBytes, {
