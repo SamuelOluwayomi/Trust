@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { supabase } from '@/lib/supabase';
-import { ethers } from "ethers";
 
 export interface Loan {
   id: string;
@@ -35,15 +34,18 @@ export function useDashboardData() {
     
     try {
       setLoading(true);
+      // FECTH RECENT LOANS FROM DB
       const { data: loansData, error: loansError } = await supabase
         .from('loans')
         .select('*')
         .eq('privy_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (loansError) throw loansError;
-      setLoans(loansData || []);
+      if (!loansError && loansData) {
+        setLoans(loansData);
+      }
 
+      // FETCH RECENT TRANSACTIONS FROM DB (Preferred for dashboard speed)
       const { data: txData, error: txError } = await supabase
         .from('transactions')
         .select('*')
@@ -66,55 +68,8 @@ export function useDashboardData() {
       return;
     }
     
-    const fetchHistory = async () => {
-      try {
-        const { getLoanManagerContract } = await import('@/lib/contracts');
-        const contract = getLoanManagerContract();
-        const address = user.wallet?.address;
-        
-        if (!address) {
-          setLoading(false);
-          return;
-        }
-
-        try {
-          const [appliedEvents, repaidEvents] = await Promise.all([
-            contract.queryFilter(contract.filters.LoanApplied(address)),
-            contract.queryFilter(contract.filters.LoanRepaid(address)),
-          ]);
-
-          const history: Transaction[] = [
-            ...appliedEvents.map((ev: any) => ({
-              id: ev.transactionHash,
-              privy_id: user.id,
-              type: 'borrow' as const,
-              amount: Number(ethers.formatEther(ev.args[1])),
-              created_at: new Date().toISOString()
-            })),
-            ...repaidEvents.map((ev: any) => ({
-              id: ev.transactionHash,
-              privy_id: user.id,
-              type: 'repay' as const,
-              amount: Number(ethers.formatEther(ev.args[1])),
-              created_at: new Date().toISOString()
-            }))
-          ].sort((a, b) => b.created_at.localeCompare(a.created_at));
-
-          if (history.length > 0) {
-            setTransactions(history);
-          }
-        } catch (chainErr) {
-          console.warn("On-chain history fetch failed, using DB fallback:", chainErr);
-          // fetchDashboardData already fetched the DB ones, so we are fine
-        }
-      } catch (err) {
-        console.error("Critical dashboard hook error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHistory();
+    // We prioritize DB data for the main dashboard to avoid 504 RPC timeouts.
+    // The "Live Balance" is handled by useUserStats separately.
     fetchDashboardData();
   }, [user, authenticated]);
 
