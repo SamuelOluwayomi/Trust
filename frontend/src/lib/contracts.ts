@@ -47,11 +47,27 @@ export function getProvider() {
   return new ethers.JsonRpcProvider('https://testnet.hsk.xyz');
 }
 
-// Get a signer from the browser wallet
-export async function getSigner() {
+/**
+ * Get a signer from either a Privy Wallet object or the window.ethereum provider.
+ * This function is designed to prefer the Privy Embedded Wallet.
+ */
+export async function getSigner(connectedWallet?: any) {
   if (typeof window === "undefined") throw new Error("No window");
-  const provider = new ethers.BrowserProvider((window as any).ethereum);
-  return provider.getSigner();
+  
+  // 1. If a Privy wallet was passed in, use it
+  if (connectedWallet) {
+    const provider = await connectedWallet.getEthereumProvider();
+    const ethersProvider = new ethers.BrowserProvider(provider);
+    return ethersProvider.getSigner();
+  }
+  
+  // 2. Fallback to injected window.ethereum (MetaMask or similar)
+  if ((window as any).ethereum) {
+    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    return provider.getSigner();
+  }
+
+  throw new Error("No wallet provider found. Please connect your wallet.");
 }
 
 // Contract instances (read-only)
@@ -68,12 +84,12 @@ export function getLoanManagerContract() {
 }
 
 // Contract instances (write — needs signer)
-export async function getFaucetContractSigned() {
-  const signer = await getSigner();
+export async function getFaucetContractSigned(connectedWallet?: any) {
+  const signer = await getSigner(connectedWallet);
   return new ethers.Contract(ADDRESSES.faucet, FAUCET_ABI, signer);
 }
 
-export async function getLoanManagerContractSigned() {
-  const signer = await getSigner();
+export async function getLoanManagerContractSigned(connectedWallet?: any) {
+  const signer = await getSigner(connectedWallet);
   return new ethers.Contract(ADDRESSES.loanManager, LOAN_MANAGER_ABI, signer);
 }

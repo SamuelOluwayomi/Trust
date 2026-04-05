@@ -29,7 +29,7 @@ export function useFaucet() {
       const time = await contract.timeUntilNextClaim(address);
       setTimeUntilClaim(Number(time));
     } catch (err) {
-      console.error(err);
+      console.error("Faucet cooldown fetch failed:", err);
     }
   }, [address]);
 
@@ -38,21 +38,27 @@ export function useFaucet() {
   }, [address, fetchCooldown]);
 
   const claim = useCallback(async () => {
+    if (wallets.length === 0) {
+      setError("No wallet connected. Please setup your wallet first.");
+      return false;
+    }
     setLoading(true);
     setError(null);
     try {
-      const contract = await getFaucetContractSigned();
+      // Pass the Privy wallet to the signer to avoid MetaMask popups
+      const contract = await getFaucetContractSigned(wallets[0]);
       const tx = await contract.claim();
       await tx.wait();
       await fetchCooldown();
       return true;
     } catch (err: any) {
+      console.error("Claim failed:", err);
       setError(err?.reason || err?.message || "Claim failed");
       return false;
     } finally {
       setLoading(false);
     }
-  }, [fetchCooldown]);
+  }, [fetchCooldown, wallets]);
 
   const canClaim = timeUntilClaim === 0;
 
@@ -62,7 +68,6 @@ export function useFaucet() {
 // --- USER STATS ---
 export function useUserStats() {
   const { user } = usePrivy();
-  const { wallets } = useWallets();
   const address = user?.wallet?.address;
 
   const [stats, setStats] = useState({
@@ -91,13 +96,13 @@ export function useUserStats() {
 
         const [sbtCount, tier, totalBorrowed, totalRepaid, loanLimit, blacklisted, balance] =
           await Promise.all([
-            sbtContract.getUserSBTCount(address),
-            loanContract.getUserTier(address),
-            loanContract.totalBorrowed(address),
-            loanContract.totalRepaid(address),
-            loanContract.getLoanLimit(address),
-            loanContract.blacklisted(address),
-            provider.getBalance(address),
+            sbtContract.getUserSBTCount(address).catch(() => 0n),
+            loanContract.getUserTier(address).catch(() => 0n),
+            loanContract.totalBorrowed(address).catch(() => 0n),
+            loanContract.totalRepaid(address).catch(() => 0n),
+            loanContract.getLoanLimit(address).catch(() => 0n),
+            loanContract.blacklisted(address).catch(() => false),
+            provider.getBalance(address).catch(() => 0n),
           ]);
 
         setStats({
@@ -157,19 +162,21 @@ export function useActiveLoan() {
       try {
         const contract = getLoanManagerContract();
         const [loanData, daysLeft] = await Promise.all([
-          contract.getActiveLoan(address),
-          contract.getDaysUntilDue(address),
+          contract.getActiveLoan(address).catch(() => ({ amount: 0n, collateral: 0n, dueDate: 0n, tier: 0, status: 0 })),
+          contract.getDaysUntilDue(address).catch(() => 0n),
         ]);
 
         const status = Number(loanData.status);
 
-        // Also fetch ID from Supabase to help with updates
-        const { data: dbLoan } = await supabase
+        // Fetch ID from Supabase using .limit(1) to avoid 406 errors
+        const { data: dbLoans } = await supabase
           .from('loans')
           .select('id')
           .eq('privy_id', user.id)
           .eq('status', 'Active')
-          .single();
+          .limit(1);
+
+        const dbLoan = dbLoans?.[0];
 
         setLoan({
           id: dbLoan?.id,
@@ -188,13 +195,14 @@ export function useActiveLoan() {
       }
     };
     fetch();
-  }, [address, user]);
+  }, [address, user?.id]);
 
   const repay = useCallback(async () => {
-    if (!user || !loan.id) return false;
+    if (!user || !loan.id || wallets.length === 0) return false;
     setRepaying(true);
     try {
-      const contract = await getLoanManagerContractSigned();
+      // Pass the Privy wallet to avoid MetaMask
+      const contract = await getLoanManagerContractSigned(wallets[0]);
       const amountWei = ethers.parseEther(loan.amount);
       const tx = await contract.repayLoan({ value: amountWei });
       await tx.wait();
@@ -221,7 +229,7 @@ export function useActiveLoan() {
     } finally {
       setRepaying(false);
     }
-  }, [loan.amount, user, loan.id]);
+  }, [loan.amount, user, loan.id, wallets]);
 
   return { ...loan, repay, repaying, loading };
 }
@@ -229,15 +237,17 @@ export function useActiveLoan() {
 // --- APPLY FOR LOAN ---
 export function useApplyForLoan() {
   const { user } = usePrivy();
+  const { wallets } = useWallets();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const apply = useCallback(async (amountHSK: string, nullifierHash: string) => {
-    if (!user) return false;
+    if (!user || wallets.length === 0) return false;
     setLoading(true);
     setError(null);
     try {
-      const contract = await getLoanManagerContractSigned();
+      // Pass the Privy wallet to avoid MetaMask
+      const contract = await getLoanManagerContractSigned(wallets[0]);
       const amountWei = ethers.parseEther(amountHSK);
       const collateral = amountWei / 10n; // 10%
       const nullifierBytes = ethers.zeroPadValue(
@@ -273,12 +283,13 @@ export function useApplyForLoan() {
 
       return true;
     } catch (err: any) {
+      console.error("Loan application failed:", err);
       setError(err?.reason || err?.message || "Loan application failed");
       return false;
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, wallets]);
 
   return { apply, loading, error };
 }
