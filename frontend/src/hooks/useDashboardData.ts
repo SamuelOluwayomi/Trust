@@ -27,7 +27,10 @@ export function useDashboardData() {
   const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = async () => {
-    if (!authenticated || !user) return;
+    if (!authenticated || !user) {
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);

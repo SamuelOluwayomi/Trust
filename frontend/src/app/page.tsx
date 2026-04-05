@@ -17,11 +17,10 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Only redirect if authenticated AND wallet is ready (prevents "Creating your wallet" hang)
-    if (ready && authenticated && user?.wallet) {
+    if (ready && authenticated) {
       router.replace("/dashboard");
     }
-  }, [ready, authenticated, user?.wallet, router]);
+  }, [ready, authenticated, router]);
 
   // If we are redirecting, we can show a loader or nothing to avoid flicker
   if (ready && authenticated) {

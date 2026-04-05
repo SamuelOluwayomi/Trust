@@ -41,7 +41,7 @@ export default function PrivyClientProvider({
         },
         embeddedWallets: {
           ethereum: {
-            createOnLogin: "users-without-wallets",
+            createOnLogin: "off",
           },
         },
         supportedChains: [hashkeyChain],
