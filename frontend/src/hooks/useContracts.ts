@@ -22,22 +22,20 @@ export function useFaucet() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!address) {
-      setLoading(false);
-      return;
+  const fetchCooldown = useCallback(async () => {
+    if (!address) return;
+    try {
+      const contract = getFaucetContract();
+      const time = await contract.timeUntilNextClaim(address);
+      setTimeUntilClaim(Number(time));
+    } catch (err) {
+      console.error(err);
     }
-    const fetch = async () => {
-      try {
-        const contract = getFaucetContract();
-        const time = await contract.timeUntilNextClaim(address);
-        setTimeUntilClaim(Number(time));
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetch();
   }, [address]);
+
+  useEffect(() => {
+    fetchCooldown();
+  }, [address, fetchCooldown]);
 
   const claim = useCallback(async () => {
     setLoading(true);
@@ -46,7 +44,7 @@ export function useFaucet() {
       const contract = await getFaucetContractSigned();
       const tx = await contract.claim();
       await tx.wait();
-      setTimeUntilClaim(86400); // 24 hours
+      await fetchCooldown();
       return true;
     } catch (err: any) {
       setError(err?.reason || err?.message || "Claim failed");
@@ -54,11 +52,11 @@ export function useFaucet() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchCooldown]);
 
   const canClaim = timeUntilClaim === 0;
 
-  return { claim, canClaim, timeUntilClaim, loading, error };
+  return { claim, canClaim, timeUntilClaim, loading, error, refetch: fetchCooldown };
 }
 
 // --- USER STATS ---

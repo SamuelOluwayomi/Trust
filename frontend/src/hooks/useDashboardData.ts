@@ -35,7 +35,6 @@ export function useDashboardData() {
     
     try {
       setLoading(true);
-      // Fetch user's loans via Supabase (as a secondary source)
       const { data: loansData, error: loansError } = await supabase
         .from('loans')
         .select('*')
@@ -44,6 +43,16 @@ export function useDashboardData() {
 
       if (loansError) throw loansError;
       setLoans(loansData || []);
+
+      const { data: txData, error: txError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('privy_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!txError && txData) {
+        setTransactions(txData);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -68,32 +77,38 @@ export function useDashboardData() {
           return;
         }
 
-        // Fetch events directly from the chain for TRULY LIVE status
-        const [appliedEvents, repaidEvents] = await Promise.all([
-          contract.queryFilter(contract.filters.LoanApplied(address)),
-          contract.queryFilter(contract.filters.LoanRepaid(address)),
-        ]);
+        try {
+          const [appliedEvents, repaidEvents] = await Promise.all([
+            contract.queryFilter(contract.filters.LoanApplied(address)),
+            contract.queryFilter(contract.filters.LoanRepaid(address)),
+          ]);
 
-        const history: Transaction[] = [
-          ...appliedEvents.map((ev: any) => ({
-            id: ev.transactionHash,
-            privy_id: user.id,
-            type: 'borrow' as const,
-            amount: Number(ethers.formatEther(ev.args[1])),
-            created_at: new Date().toISOString()
-          })),
-          ...repaidEvents.map((ev: any) => ({
-            id: ev.transactionHash,
-            privy_id: user.id,
-            type: 'repay' as const,
-            amount: Number(ethers.formatEther(ev.args[1])),
-            created_at: new Date().toISOString()
-          }))
-        ].sort((a, b) => b.created_at.localeCompare(a.created_at));
+          const history: Transaction[] = [
+            ...appliedEvents.map((ev: any) => ({
+              id: ev.transactionHash,
+              privy_id: user.id,
+              type: 'borrow' as const,
+              amount: Number(ethers.formatEther(ev.args[1])),
+              created_at: new Date().toISOString()
+            })),
+            ...repaidEvents.map((ev: any) => ({
+              id: ev.transactionHash,
+              privy_id: user.id,
+              type: 'repay' as const,
+              amount: Number(ethers.formatEther(ev.args[1])),
+              created_at: new Date().toISOString()
+            }))
+          ].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
-        setTransactions(history);
+          if (history.length > 0) {
+            setTransactions(history);
+          }
+        } catch (chainErr) {
+          console.warn("On-chain history fetch failed, using DB fallback:", chainErr);
+          // fetchDashboardData already fetched the DB ones, so we are fine
+        }
       } catch (err) {
-        console.error("Live history fetch failed:", err);
+        console.error("Critical dashboard hook error:", err);
       } finally {
         setLoading(false);
       }

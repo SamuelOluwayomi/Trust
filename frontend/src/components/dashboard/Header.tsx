@@ -1,12 +1,12 @@
 "use client";
 
-import { Bell, MagnifyingGlass, Wallet, List } from "@phosphor-icons/react";
+import { Bell, MagnifyingGlass, Wallet, List, Coins } from "@phosphor-icons/react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useUserStats } from "@/hooks/useContracts";
+import { useUserStats, useFaucet } from "@/hooks/useContracts";
 import { ShieldCheck, Certificate } from "@phosphor-icons/react";
 
 export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
@@ -15,6 +15,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { transactions } = useDashboardData();
   const { isVerified } = useUserProfile();
   const { sbtCount, tierName, balance } = useUserStats();
+  const { claim, canClaim, timeUntilClaim, loading: faucetLoading } = useFaucet();
   const { createWallet } = usePrivy();
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -39,7 +40,6 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         params.delete("q");
       }
       
-      // Update URL without a full page reload or scroll jump
       const newUrl = `${pathname}?${params.toString()}`;
       if (window.location.search !== `?${params.toString()}`) {
         router.replace(newUrl, { scroll: false });
@@ -70,6 +70,14 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
     ? `${primaryWallet.slice(0, 6)}...${primaryWallet.slice(-4)}`
     : "No Wallet";
 
+  // Helper to format countdown
+  const formatTime = (seconds: number) => {
+    if (seconds <= 0) return null;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${h}h ${m}m`;
+  };
+
   return (
     <header className="h-20 lg:ml-64 bg-[#0a0f1e]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-30">
       
@@ -94,9 +102,27 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
       </div>
 
       {/* Right items */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4 sm:gap-6">
         
-        {/* Mobile Setup Wallet Button - High Visibility */}
+        {/* Faucet Claim Button */}
+        {user?.wallet && (
+          <button
+            onClick={() => claim()}
+            disabled={!canClaim || faucetLoading}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-300 ${
+              canClaim 
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50 cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+                : 'bg-white/5 border-white/5 text-slate-500 cursor-not-allowed grayscale'
+            }`}
+          >
+            <Coins className={`w-3.5 h-3.5 ${faucetLoading ? 'animate-spin' : ''}`} weight="fill" />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              {faucetLoading ? 'Processing...' : canClaim ? 'Claim HSK' : formatTime(timeUntilClaim)}
+            </span>
+          </button>
+        )}
+
+        {/* Mobile Setup Wallet Button */}
         {user && !user.wallet && (
           <button
             onClick={() => createWallet()}
@@ -116,7 +142,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         </div>
 
         {/* SBT Count */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
           <Certificate className="w-3.5 h-3.5" weight="fill" />
           <span className="text-xs font-black">{sbtCount}</span>
           <span className="text-[10px] font-bold tracking-widest uppercase opacity-80">SBTs</span>
@@ -155,7 +181,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         </div>
 
         {/* Profile / Wallet */}
-        <div className="flex items-center gap-3 pl-6 border-l border-white/10">
+        <div className="flex items-center gap-3 pl-4 sm:pl-6 border-l border-white/10">
           <div className="hidden md:flex flex-col items-end">
             <div className="flex items-center gap-1.5 mb-0.5">
               <span className="text-[10px] text-emerald-400 font-black tracking-widest uppercase">{Number(balance).toFixed(4)} HSK</span>

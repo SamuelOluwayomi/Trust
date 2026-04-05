@@ -36,7 +36,7 @@ export const LOAN_MANAGER_ABI = [
 
 // Get a provider connected to HashKey testnet
 export function getProvider() {
-  return new ethers.JsonRpcProvider("https://testnet.hsk.xyz");
+  return new ethers.JsonRpcProvider("https://hashkey-testnet.alt.technology");
 }
 
 // Get a signer from the browser wallet
