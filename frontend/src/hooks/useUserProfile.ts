@@ -28,17 +28,16 @@ export function useUserProfile() {
       setLoading(true);
       setError(null);
       
+      // Use .limit(1) instead of .single() to avoid 406 errors when user doesn't exist
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('privy_id', user.id)
-        .single();
+        .limit(1);
         
-      if (error && error.code !== 'PGRST116') { // Not "No rows returned"
-        throw error;
-      }
+      if (error) throw error;
       
-      setProfile(data || null);
+      setProfile(data && data.length > 0 ? data[0] : null);
     } catch (err: any) {
       console.error('Error fetching profile:', err);
       setError(err);
@@ -68,12 +67,11 @@ export function useUserProfile() {
           privy_id: user.id,
           wallet_address: user.wallet?.address || wallets[0]?.address || null,
           worldid_nullifier: nullifier,
-        }, { onConflict: 'privy_id' }) // Ensure we update the unique record for this user
-        .select()
-        .single();
+        }, { onConflict: 'privy_id' })
+        .select();
         
       if (userError) throw userError;
-      setProfile(userData);
+      setProfile(userData && userData.length > 0 ? userData[0] : null);
     }
   };
 }

@@ -28,15 +28,18 @@ export const LOAN_MANAGER_ABI = [
   "function getUserTier(address user) external view returns (uint8)",
   "function getLoanLimit(address user) external view returns (uint256)",
   "function getDaysUntilDue(address user) external view returns (uint256)",
+  "function totalBorrowed(address) external view returns (uint256)",
   "function totalRepaid(address) external view returns (uint256)",
   "function blacklisted(address) external view returns (bool)",
   "event LoanApplied(address indexed user, uint256 amount, uint8 tier, bytes32 nullifier)",
   "event LoanRepaid(address indexed user, uint256 amount)",
 ];
 
-// Get a provider connected to HashKey testnet
+// Get a provider connected to HashKey testnet via local proxy to bypass browser CORS
 export function getProvider() {
-  return new ethers.JsonRpcProvider("https://hashkey-testnet.alt.technology");
+  // On browser, use our local proxy to avoid CORS. On server, use the direct RPC.
+  const url = typeof window !== 'undefined' ? '/api/rpc' : 'https://testnet.hsk.xyz';
+  return new ethers.JsonRpcProvider(url);
 }
 
 // Get a signer from the browser wallet

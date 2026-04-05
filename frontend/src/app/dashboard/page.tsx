@@ -14,15 +14,19 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useDashboardData } from "@/hooks/useDashboardData"; // Keep for history/transactions
 
 export default function DashboardOverview() {
+  const { user } = usePrivy();
   const { isVerified, verify } = useUserProfile();
   const { sbtCount, totalBorrowed, totalRepaid, loanLimit, tierName, balance, loading: statsLoading } = useUserStats();
-  const { hasActiveLoan, amount, daysLeft, repay, repaying, loading: loanLoading } = useActiveLoan();
+  const { hasActiveLoan, amount, status, repay, repaying, loading: loanLoading } = useActiveLoan();
   const { transactions, loading: historyLoading } = useDashboardData();
   const searchParams = useSearchParams();
   const query = searchParams.get("q")?.toLowerCase() || "";
 
   const totalDueAmount = Number(totalBorrowed) - Number(totalRepaid);
   const activeLoanData = hasActiveLoan ? { amount: Number(amount), amount_paid: 0, id: 'chain-active' } : null;
+
+  // Identity logic for display
+  const primaryId = user?.email?.address || user?.google?.email || (user?.wallet?.address ? `${user.wallet.address.slice(0, 6)}...${user.wallet.address.slice(-4)}` : 'identity');
 
   // Filter transactions for charts based on query
   const filteredTransactions = transactions.filter(tx => 
@@ -68,7 +72,7 @@ export default function DashboardOverview() {
                 {isVerified ? (
                   <> Your identity is verified as a unique human. You have unlocked the <strong className="text-emerald-400">Bronze Tier</strong>.</>
                 ) : (
-                  <> Verify your identity with World ID to unlock lending tiers and start borrowing.</>
+                  <> Verify account <strong className="text-white italic">{primaryId}</strong> with World ID to unlock lending tiers and start borrowing.</>
                 )}
               </p>
             </div>
