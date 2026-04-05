@@ -1,111 +1,225 @@
-import { useState } from 'react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { supabase } from '@/lib/supabase';
+"use client";
+
+import { useState, useCallback, useMemo } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { ethers } from "ethers";
+import { supabase } from "@/lib/supabase";
+
+const LOAN_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_LOAN_MANAGER_ADDRESS!;
+const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_FAUCET_ADDRESS!;
+
+const LOAN_MANAGER_ABI = [
+  "function applyForLoan(uint256 amount, bytes32 nullifier) external payable",
+  "function repayLoan() external payable",
+  "function getActiveLoan(address user) external view returns (tuple(uint256 amount, uint256 collateral, uint256 startTime, uint256 dueDate, uint8 tier, uint8 status))",
+  "function getUserTier(address user) external view returns (uint8)",
+  "function getLoanLimit(address user) external view returns (uint256)",
+  "function getDaysUntilDue(address user) external view returns (uint256)",
+  "function totalBorrowed(address) external view returns (uint256)",
+  "function totalRepaid(address) external view returns (uint256)",
+  "function blacklisted(address) external view returns (bool)",
+];
+
+const FAUCET_ABI = [
+  "function claim() external",
+  "function timeUntilNextClaim(address user) external view returns (uint256)",
+  "function getBalance() external view returns (uint256)",
+];
+
+const TIER_NAMES = ["None", "Bronze", "Silver", "Gold"];
+
+// Helper to get a stable provider via our local proxy
+const getProxyProvider = () => {
+  if (typeof window === 'undefined') return new ethers.JsonRpcProvider("https://testnet.hsk.xyz");
+  const baseUrl = window.location.origin;
+  return new ethers.JsonRpcProvider(`${baseUrl}/api/rpc`, { chainId: 133, name: 'hashkey' }, { staticNetwork: true });
+};
+
+async function getPrivySigner(wallet: any) {
+  const provider = await wallet.getEthereumProvider();
+  return new ethers.BrowserProvider(provider).getSigner();
+}
 
 export function useLending() {
   const { user, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const [isBorrowing, setIsBorrowing] = useState(false);
   const [isRepaying, setIsRepaying] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const borrow = async (amount: number) => {
-    if (!authenticated || !user || wallets.length === 0) {
-      throw new Error("Wallet not connected");
+  // Find the embedded wallet specifically to avoid external provider conflicts
+  const embeddedWallet = useMemo(() => {
+    return wallets.find(w => w.walletClientType === 'privy');
+  }, [wallets]);
+
+  const getWallet = () => {
+    if (!authenticated || !user || !embeddedWallet) {
+      throw new Error("Embedded wallet not found. Please setup your wallet.");
     }
+    return embeddedWallet;
+  };
 
-    setIsBorrowing(true);
+  // --- FAUCET CLAIM ---
+  const claimFaucet = async () => {
+    const wallet = getWallet();
+    setIsClaiming(true);
+    setError(null);
     try {
-      // Mock network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const signer = await getPrivySigner(wallet);
+      const contract = new ethers.Contract(FAUCET_ADDRESS, FAUCET_ABI, signer);
+      const tx = await contract.claim();
+      await tx.wait();
+      return true;
+    } catch (err: any) {
+      console.error("Faucet claim failed:", err);
+      setError(err?.reason || err?.message || "Funding failed. Network busy.");
+      return false;
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
-      const tier = amount <= 0.02 ? 'Bronze' : amount <= 0.05 ? 'Silver' : 'Gold';
+  // --- BORROW ---
+  const borrow = async (amountHSK: number, nullifierHash?: string) => {
+    const wallet = getWallet();
+    setIsBorrowing(true);
+    setError(null);
+    try {
+      const signer = await getPrivySigner(wallet);
+      const contract = new ethers.Contract(LOAN_MANAGER_ADDRESS, LOAN_MANAGER_ABI, signer);
 
-      // Insert Loan into database
-      const { error: loanError } = await supabase
-        .from('loans')
-        .insert({
-          privy_id: user.id,
-          amount,
-          tier,
-          status: 'Active',
-          amount_paid: 0
-        });
-      
-      if (loanError) throw loanError;
+      const amountWei = ethers.parseEther(amountHSK.toString());
+      // Explicit 10% collateral math to avoid gas estimation failures
+      const collateral = (amountWei * 10n) / 100n;
 
-      // Insert transaction history
-      const { error: txError } = await supabase
-        .from('transactions')
-        .insert({
-          privy_id: user.id,
-          type: 'borrow',
-          amount
-        });
+      // Handle nullifier formatting
+      let nullifier;
+      if (nullifierHash && nullifierHash !== "0") {
+        nullifier = ethers.zeroPadValue(ethers.toBeHex(BigInt(nullifierHash)), 32);
+      } else {
+        // Fallback for tests (though in prod World ID is required)
+        nullifier = ethers.keccak256(ethers.toUtf8Bytes(user!.id + "initial_loan"));
+      }
 
-      if (txError) throw txError;
+      console.log("Applying for loan on-chain:", {
+        amount: ethers.formatEther(amountWei),
+        collateral: ethers.formatEther(collateral),
+        nullifier,
+      });
 
-      return { success: true };
-    } catch (error) {
-      console.error("Borrowing failed:", error);
-      throw error;
+      const tx = await contract.applyForLoan(amountWei, nullifier, {
+        value: collateral,
+      });
+      await tx.wait();
+
+      // Update Supabase for history tracking
+      const tierNum = await contract.getUserTier(await signer.getAddress());
+      const tier = TIER_NAMES[Number(tierNum)] || "Bronze";
+
+      await supabase.from("loans").insert({
+        privy_id: user!.id,
+        amount: amountHSK,
+        tier,
+        status: "Active",
+        amount_paid: 0
+      });
+
+      await supabase.from("transactions").insert({
+        privy_id: user!.id,
+        type: "borrow",
+        amount: amountHSK
+      });
+
+      return true;
+    } catch (err: any) {
+      console.error("Borrowing failed:", err);
+      setError(err?.reason || err?.message || "Loan application failed. Check your gas!");
+      return false;
     } finally {
       setIsBorrowing(false);
     }
   };
 
-  const repay = async (amount: number, loanId: string) => {
-    if (!authenticated || !user || wallets.length === 0) {
-      throw new Error("Wallet not connected");
-    }
-
+  // --- REPAY ---
+  const repay = async (amountHSK: number, loanId?: string) => {
+    const wallet = getWallet();
     setIsRepaying(true);
+    setError(null);
     try {
-      // Mock network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const signer = await getPrivySigner(wallet);
+      const contract = new ethers.Contract(LOAN_MANAGER_ADDRESS, LOAN_MANAGER_ABI, signer);
 
-      // Update Loan
-      const { data: loan, error: fetchError } = await supabase
-        .from('loans')
-        .select('*')
-        .eq('id', loanId)
-        .single();
-      
-      if (fetchError) throw fetchError;
+      const amountWei = ethers.parseEther(amountHSK.toString());
+      const tx = await contract.repayLoan({ value: amountWei });
+      await tx.wait();
 
-      const newAmountPaid = Number(loan.amount_paid) + amount;
-      const status = newAmountPaid >= Number(loan.amount) ? 'Repaid' : 'Active';
+      if (loanId) {
+        await supabase.from("loans").update({ status: "Repaid", amount_paid: amountHSK }).eq("id", loanId);
+      }
 
-      const { error: updateError } = await supabase
-        .from('loans')
-        .update({ amount_paid: newAmountPaid, status })
-        .eq('id', loanId);
+      await supabase.from("transactions").insert({
+        privy_id: user!.id,
+        type: "repay",
+        amount: amountHSK
+      });
 
-      if (updateError) throw updateError;
-
-      // Insert transaction history
-      const { error: txError } = await supabase
-        .from('transactions')
-        .insert({
-          privy_id: user.id,
-          type: 'repay',
-          amount
-        });
-
-      if (txError) throw txError;
-
-      return { success: true };
-    } catch (error) {
-      console.error("Repaying failed:", error);
-      throw error;
+      return true;
+    } catch (err: any) {
+      console.error("Repayment failed:", err);
+      setError(err?.reason || err?.message || "Repayment failed.");
+      return false;
     } finally {
       setIsRepaying(false);
+    }
+  };
+
+  // --- READ STATS ---
+  const getStats = async () => {
+    if (!user?.wallet?.address) return null;
+    try {
+      const provider = getProxyProvider();
+      const contract = new ethers.Contract(LOAN_MANAGER_ADDRESS, LOAN_MANAGER_ABI, provider);
+      const address = user.wallet.address;
+
+      const [tier, loanLimit, totalBorrowed, totalRepaid, blacklisted, activeLoan, balance] =
+        await Promise.all([
+          contract.getUserTier(address).catch(() => 0n),
+          contract.getLoanLimit(address).catch(() => 0n),
+          contract.totalBorrowed(address).catch(() => 0n),
+          contract.totalRepaid(address).catch(() => 0n),
+          contract.blacklisted(address).catch(() => false),
+          contract.getActiveLoan(address).catch(() => null),
+          provider.getBalance(address).catch(() => 0n),
+        ]);
+
+      return {
+        tier: Number(tier),
+        tierName: TIER_NAMES[Number(tier)],
+        loanLimit: ethers.formatEther(loanLimit),
+        totalBorrowed: ethers.formatEther(totalBorrowed),
+        totalRepaid: ethers.formatEther(totalRepaid),
+        balance: ethers.formatUnits(balance, 18),
+        blacklisted,
+        activeLoan: activeLoan ? {
+          amount: ethers.formatEther(activeLoan.amount),
+          status: Number(activeLoan.status)
+        } : null
+      };
+    } catch (err) {
+      console.error("Global stats sync failed:", err);
+      return null;
     }
   };
 
   return {
     borrow,
     repay,
+    claimFaucet,
+    getStats,
     isBorrowing,
-    isRepaying
+    isRepaying,
+    isClaiming,
+    error,
   };
 }

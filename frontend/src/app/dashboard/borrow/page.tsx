@@ -1,25 +1,41 @@
 "use client";
+
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useApplyForLoan, useActiveLoan, useUserStats } from "@/hooks/useContracts";
+import { useLending } from "@/hooks/useLending";
 import LoanTierCard from "@/components/dashboard/LoanTierCard";
 import { ShieldCheck, Info, WarningCircle, Coins } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
 
 export default function BorrowPage() {
   const { isVerified, profile } = useUserProfile();
-  const { apply, loading: isBorrowing, error } = useApplyForLoan();
-  const { hasActiveLoan, repaying: isRepaying } = useActiveLoan();
-  const { loanLimit } = useUserStats();
+  const { borrow, isBorrowing, isRepaying, error, getStats } = useLending();
+  const [stats, setStats] = useState<any>(null);
 
-  const handleBorrow = (amount: number) => {
-    if (profile?.worldid_nullifier) {
-      apply(amount.toString(), profile.worldid_nullifier);
+  // Sync real-time on-chain stats (Tier, Limits)
+  useEffect(() => {
+    const sync = async () => {
+      const data = await getStats();
+      if (data) setStats(data);
+    };
+    sync();
+  }, [getStats, isBorrowing]);
+
+  const handleBorrow = async (amount: number) => {
+    if (!isVerified) return;
+    // Pass the real World ID nullifier stored in Supabase
+    const success = await borrow(amount, profile?.worldid_nullifier || undefined);
+    if (success) {
+      window.location.href = "/dashboard/my-loans";
     }
   };
+
   const tiers = [
     { name: "Bronze", limit: "0.02", amount: 0.02 },
     { name: "Silver", limit: "0.05", amount: 0.05 },
     { name: "Gold", limit: "0.1", amount: 0.1 },
   ];
+
+  const hasActiveLoan = stats?.activeLoan?.status === 1;
 
   return (
     <div className="space-y-8">
@@ -39,8 +55,11 @@ export default function BorrowPage() {
 
       {/* Tiers Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tiers.map((tier, i) => {
-          const isQualified = isVerified && !hasActiveLoan && Number(loanLimit) >= tier.amount;
+        {tiers.map((tier) => {
+          // Qualification logic based on real-time on-chain tier
+          const tierLimit = Number(stats?.loanLimit || 0);
+          const isQualified = isVerified && !hasActiveLoan && tierLimit >= tier.amount;
+          
           return (
             <LoanTierCard 
               key={tier.name}
@@ -49,7 +68,7 @@ export default function BorrowPage() {
               isQualified={isQualified}
               isBorrowing={isBorrowing}
               isRepaying={isRepaying}
-              onBorrow={handleBorrow}
+              onBorrow={() => handleBorrow(tier.amount)}
               amount={tier.amount}
             />
           );
@@ -66,47 +85,23 @@ export default function BorrowPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Collateral Info */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Coins className="w-5 h-5 text-emerald-400" weight="fill" />
               <h3 className="text-sm font-bold text-white uppercase tracking-wider">Collateral Mechanism</h3>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Every loan requires a <strong className="text-white">10% soft collateral</strong>. This collateral is locked for the duration of the loan and is returned to your wallet upon full repayment.
+              Every loan requires a <strong className="text-white">10% soft collateral</strong>. This collateral is locked and returned upon full repayment.
             </p>
           </div>
 
-          {/* Repayment Terms */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-blue-400" weight="fill" />
               <h3 className="text-sm font-bold text-white uppercase tracking-wider">Repayment Terms</h3>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Standard loan duration is <strong className="text-white">30 days</strong>. Repaying on time boosts your credit score and helps you unlock higher borrowing limits (Silver and Gold tiers).
-            </p>
-          </div>
-
-          {/* Default Risk */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <WarningCircle className="w-5 h-5 text-red-400" weight="fill" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Default & Blacklisting</h3>
-            </div>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              If a loan is not repaid within the 30-day window, your collateral will be forfeited, and your World ID identity will be <strong className="text-red-400">permanently blacklisted</strong> from our protocol.
-            </p>
-          </div>
-
-          {/* Identity Protection */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-400" weight="fill" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Identity Privacy</h3>
-            </div>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Your borrowing behavior is linked to your Soul-Bound Token (SBT), not your personal data. All verifications are processed via <strong className="text-emerald-400">Zero-Knowledge Proofs</strong> to ensure maximum privacy.
+              Standard loan duration is <strong className="text-white">30 days</strong>. Timely repayment unlocks higher Silver/Gold limits.
             </p>
           </div>
         </div>
