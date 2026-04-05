@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ethers } from "ethers";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { supabase } from "@/lib/supabase";
@@ -13,10 +13,21 @@ import {
   getProvider,
 } from "@/lib/contracts";
 
+/**
+ * Helper hook to retrieve the Privy embedded wallet specifically.
+ * We use this to avoid picking MetaMask/External wallets if they are also connected.
+ */
+function useEmbeddedWallet() {
+  const { wallets } = useWallets();
+  return useMemo(() => {
+    return wallets.find(w => w.walletClientType === 'privy');
+  }, [wallets]);
+}
+
 // --- FAUCET ---
 export function useFaucet() {
   const { user } = usePrivy();
-  const { wallets } = useWallets();
+  const embeddedWallet = useEmbeddedWallet();
   const address = user?.wallet?.address;
   const [timeUntilClaim, setTimeUntilClaim] = useState<number>(0);
   const [loading, setLoading] = useState(false);
@@ -32,7 +43,6 @@ export function useFaucet() {
       setTimeUntilClaim(Number(time));
     } catch (err) {
       console.warn("Faucet check timed out, enabling Safe Mode.");
-      // If we can't read the cooldown, default to 0 to allow the user to try claiming
       setTimeUntilClaim(0); 
     } finally {
       setIsSyncing(false);
@@ -44,31 +54,29 @@ export function useFaucet() {
   }, [address, fetchCooldown]);
 
   const claim = useCallback(async () => {
-    if (wallets.length === 0) {
-      setError("No wallet connected. Please setup your wallet first.");
+    if (!embeddedWallet) {
+      setError("Embedded wallet not found. Please setup your wallet in the dashboard.");
       return false;
     }
     setLoading(true);
     setError(null);
     try {
-      // Use Privy primary wallet signer
-      const contract = await getFaucetContractSigned(wallets[0]);
+      // FORCE use of the embedded wallet specifically
+      const contract = await getFaucetContractSigned(embeddedWallet);
       const tx = await contract.claim();
       await tx.wait();
       await fetchCooldown();
       return true;
     } catch (err: any) {
       console.error("Claim transaction failed:", err);
-      // Detailed error for common faucet issues (e.g. cooldown)
       const msg = err?.reason || err?.message || "Internal network error.";
       setError(msg.includes("wait") ? "Cooldown active. Try again later." : "Funding failed. The network is busy.");
       return false;
     } finally {
       setLoading(false);
     }
-  }, [fetchCooldown, wallets]);
+  }, [fetchCooldown, embeddedWallet]);
 
-  // Safe Mode: If we're not syncing AND the count is 0, we can claim.
   const canClaim = timeUntilClaim === 0;
 
   return { claim, canClaim, timeUntilClaim, loading, error, isSyncing, refetch: fetchCooldown };
@@ -138,7 +146,7 @@ export function useUserStats() {
 // --- ACTIVE LOAN ---
 export function useActiveLoan() {
   const { user } = usePrivy();
-  const { wallets } = useWallets();
+  const embeddedWallet = useEmbeddedWallet();
   const address = user?.wallet?.address;
 
   const [loan, setLoan] = useState<{
@@ -206,10 +214,10 @@ export function useActiveLoan() {
   }, [address, user?.id]);
 
   const repay = useCallback(async () => {
-    if (!user || !loan.id || wallets.length === 0) return false;
+    if (!user || !loan.id || !embeddedWallet) return false;
     setRepaying(true);
     try {
-      const contract = await getLoanManagerContractSigned(wallets[0]);
+      const contract = await getLoanManagerContractSigned(embeddedWallet);
       const amountWei = ethers.parseEther(loan.amount);
       const tx = await contract.repayLoan({ value: amountWei });
       await tx.wait();
@@ -235,7 +243,7 @@ export function useActiveLoan() {
     } finally {
       setRepaying(false);
     }
-  }, [loan.amount, user, loan.id, wallets]);
+  }, [loan.amount, user, loan.id, embeddedWallet]);
 
   return { ...loan, repay, repaying, loading };
 }
@@ -243,16 +251,16 @@ export function useActiveLoan() {
 // --- APPLY FOR LOAN ---
 export function useApplyForLoan() {
   const { user } = usePrivy();
-  const { wallets } = useWallets();
+  const embeddedWallet = useEmbeddedWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const apply = useCallback(async (amountHSK: string, nullifierHash: string) => {
-    if (!user || wallets.length === 0) return false;
+    if (!user || !embeddedWallet) return false;
     setLoading(true);
     setError(null);
     try {
-      const contract = await getLoanManagerContractSigned(wallets[0]);
+      const contract = await getLoanManagerContractSigned(embeddedWallet);
       const amountWei = ethers.parseEther(amountHSK);
       const collateral = amountWei / 10n;
       const nullifierBytes = ethers.zeroPadValue(ethers.toBeHex(BigInt(nullifierHash)), 32);
@@ -290,7 +298,7 @@ export function useApplyForLoan() {
     } finally {
       setLoading(false);
     }
-  }, [user, wallets]);
+  }, [user, embeddedWallet]);
 
   return { apply, loading, error };
 }

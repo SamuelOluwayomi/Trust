@@ -61,13 +61,7 @@ export async function getSigner(connectedWallet?: any) {
     return ethersProvider.getSigner();
   }
   
-  // 2. Fallback to injected window.ethereum (MetaMask or similar)
-  if ((window as any).ethereum) {
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
-    return provider.getSigner();
-  }
-
-  throw new Error("No wallet provider found. Please connect your wallet.");
+  throw new Error("No wallet signer available. Please ensure your embedded wallet is ready.");
 }
 
 // Contract instances (read-only)
