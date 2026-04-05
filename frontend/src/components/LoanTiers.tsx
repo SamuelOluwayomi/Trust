@@ -5,7 +5,7 @@ const tiers = [
   {
     symbol: "Cu",
     name: "Bronze",
-    maxLoan: "500 HSK",
+    maxLoan: "0.02 HSK",
     apr: "18.5%",
     duration: "30 days",
     color: "#cd7f32",
@@ -20,7 +20,7 @@ const tiers = [
   {
     symbol: "Ag",
     name: "Silver",
-    maxLoan: "2,000 HSK",
+    maxLoan: "0.05 HSK",
     apr: "12%",
     duration: "60 days",
     color: "#378ADD",
@@ -36,7 +36,7 @@ const tiers = [
   {
     symbol: "Au",
     name: "Gold",
-    maxLoan: "5,000 HSK",
+    maxLoan: "0.1 HSK",
     apr: "8.5%",
     duration: "90 days",
     color: "#f5c518",

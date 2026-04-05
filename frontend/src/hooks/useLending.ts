@@ -18,7 +18,7 @@ export function useLending() {
       // Mock network delay
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const tier = amount <= 500 ? 'Bronze' : amount <= 2000 ? 'Silver' : 'Gold';
+      const tier = amount <= 0.02 ? 'Bronze' : amount <= 0.05 ? 'Silver' : 'Gold';
 
       // Insert Loan into database
       const { error: loanError } = await supabase

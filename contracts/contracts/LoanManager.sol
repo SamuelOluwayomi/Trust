@@ -7,9 +7,9 @@ contract LoanManager is Ownable {
     LoanSBT public sbtContract;
 
     // Tier limits in HSK (wei)
-    uint256 public constant BRONZE_LIMIT = 500 ether;
-    uint256 public constant SILVER_LIMIT = 2000 ether;
-    uint256 public constant GOLD_LIMIT = 5000 ether;
+    uint256 public constant BRONZE_LIMIT = 0.02 ether;
+    uint256 public constant SILVER_LIMIT = 0.05 ether;
+    uint256 public constant GOLD_LIMIT = 0.1 ether;
 
     uint256 public constant LOAN_DURATION = 30 days;
     uint256 public constant COLLATERAL_PERCENT = 10; // 10% soft collateral

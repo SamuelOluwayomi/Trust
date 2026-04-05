@@ -18,18 +18,18 @@ import { usePrivy } from "@privy-io/react-auth";
 
 const MENU_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: SquaresFour },
-  { label: "My Loans", href: "#", icon: Wallet },
-  { label: "Borrow", href: "#", icon: HandCoins },
-  { label: "ZK Proof", href: "#", icon: ShieldCheck },
+  { label: "My Loans", href: "/dashboard/loans", icon: Wallet },
+  { label: "Borrow", href: "/dashboard/borrow", icon: HandCoins },
+  { label: "ZK Proof", href: "/dashboard/proof", icon: ShieldCheck },
 ];
 
 const FINANCIAL_ITEMS = [
-  { label: "Repayment History", href: "#", icon: ClockCounterClockwise },
-  { label: "Soulbound Tokens", href: "#", icon: Certificate },
+  { label: "Repayment History", href: "/dashboard/history", icon: ClockCounterClockwise },
+  { label: "Soulbound Tokens", href: "/dashboard/sbt", icon: Certificate },
 ];
 
 const TOOLS_ITEMS = [
-  { label: "Settings", href: "#", icon: Gear },
+  { label: "Settings", href: "/dashboard/settings", icon: Gear },
   { label: "Telegram Bot", href: "https://t.me/Tru3t_Bot", icon: PaperPlaneRight },
 ];
 

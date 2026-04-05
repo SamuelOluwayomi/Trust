@@ -68,7 +68,7 @@ export function useUserProfile() {
           privy_id: user.id,
           wallet_address: wallets[0]?.address || null,
           worldid_nullifier: nullifier,
-        }, { onConflict: 'privy_id' })
+        }, { onConflict: 'worldid_nullifier' }) // Tie identity to worldid_nullifier to fix 409 conflict
         .select()
         .single();
         
