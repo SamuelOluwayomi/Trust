@@ -21,15 +21,21 @@ export function useFaucet() {
   const [timeUntilClaim, setTimeUntilClaim] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const fetchCooldown = useCallback(async () => {
     if (!address) return;
     try {
+      setIsSyncing(true);
       const contract = getFaucetContract();
       const time = await contract.timeUntilNextClaim(address);
       setTimeUntilClaim(Number(time));
     } catch (err) {
-      console.error("Faucet cooldown fetch failed:", err);
+      console.warn("Faucet check timed out, enabling Safe Mode.");
+      // If we can't read the cooldown, default to 0 to allow the user to try claiming
+      setTimeUntilClaim(0); 
+    } finally {
+      setIsSyncing(false);
     }
   }, [address]);
 
@@ -45,24 +51,27 @@ export function useFaucet() {
     setLoading(true);
     setError(null);
     try {
-      // Pass the Privy wallet to the signer to avoid MetaMask popups
+      // Use Privy primary wallet signer
       const contract = await getFaucetContractSigned(wallets[0]);
       const tx = await contract.claim();
       await tx.wait();
       await fetchCooldown();
       return true;
     } catch (err: any) {
-      console.error("Claim failed:", err);
-      setError(err?.reason || err?.message || "Claim failed");
+      console.error("Claim transaction failed:", err);
+      // Detailed error for common faucet issues (e.g. cooldown)
+      const msg = err?.reason || err?.message || "Internal network error.";
+      setError(msg.includes("wait") ? "Cooldown active. Try again later." : "Funding failed. The network is busy.");
       return false;
     } finally {
       setLoading(false);
     }
   }, [fetchCooldown, wallets]);
 
+  // Safe Mode: If we're not syncing AND the count is 0, we can claim.
   const canClaim = timeUntilClaim === 0;
 
-  return { claim, canClaim, timeUntilClaim, loading, error, refetch: fetchCooldown };
+  return { claim, canClaim, timeUntilClaim, loading, error, isSyncing, refetch: fetchCooldown };
 }
 
 // --- USER STATS ---
@@ -72,11 +81,11 @@ export function useUserStats() {
 
   const [stats, setStats] = useState({
     sbtCount: 0,
-    tier: 0, // 0=None, 1=Bronze, 2=Silver, 3=Gold
+    tier: 0, 
     totalBorrowed: "0",
     totalRepaid: "0",
     loanLimit: "0",
-    balance: "0", // Local HSK Balance
+    balance: "0", 
     blacklisted: false,
   });
   const [loading, setLoading] = useState(true);
@@ -115,7 +124,7 @@ export function useUserStats() {
           blacklisted,
         });
       } catch (err) {
-        console.error("Failed to fetch user stats:", err);
+        console.error("Stats sync failed:", err);
       } finally {
         setLoading(false);
       }
@@ -139,7 +148,7 @@ export function useActiveLoan() {
     dueDate: Date | null;
     daysLeft: number;
     tier: number;
-    status: number; // 0=None, 1=Active, 2=Repaid, 3=Defaulted
+    status: number; 
     hasActiveLoan: boolean;
   }>({
     amount: "0",
@@ -154,7 +163,7 @@ export function useActiveLoan() {
   const [repaying, setRepaying] = useState(false);
 
   useEffect(() => {
-    if (!address) {
+    if (!address || !user?.id) {
       setLoading(false);
       return;
     }
@@ -168,7 +177,6 @@ export function useActiveLoan() {
 
         const status = Number(loanData.status);
 
-        // Fetch ID from Supabase using .limit(1) to avoid 406 errors
         const { data: dbLoans } = await supabase
           .from('loans')
           .select('id')
@@ -189,7 +197,7 @@ export function useActiveLoan() {
           hasActiveLoan: status === 1,
         });
       } catch (err) {
-        console.error("Failed to fetch loan:", err);
+        console.error("Loan sync failed:", err);
       } finally {
         setLoading(false);
       }
@@ -201,13 +209,11 @@ export function useActiveLoan() {
     if (!user || !loan.id || wallets.length === 0) return false;
     setRepaying(true);
     try {
-      // Pass the Privy wallet to avoid MetaMask
       const contract = await getLoanManagerContractSigned(wallets[0]);
       const amountWei = ethers.parseEther(loan.amount);
       const tx = await contract.repayLoan({ value: amountWei });
       await tx.wait();
 
-      // SYNC WITH SUPABASE
       await supabase
         .from('loans')
         .update({ status: 'Repaid', amount_paid: Number(loan.amount) })
@@ -224,7 +230,7 @@ export function useActiveLoan() {
       setLoan((prev) => ({ ...prev, status: 2, hasActiveLoan: false }));
       return true;
     } catch (err: any) {
-      console.error("Repay failed:", err);
+      console.error("Repayment failed:", err);
       return false;
     } finally {
       setRepaying(false);
@@ -246,21 +252,16 @@ export function useApplyForLoan() {
     setLoading(true);
     setError(null);
     try {
-      // Pass the Privy wallet to avoid MetaMask
       const contract = await getLoanManagerContractSigned(wallets[0]);
       const amountWei = ethers.parseEther(amountHSK);
-      const collateral = amountWei / 10n; // 10%
-      const nullifierBytes = ethers.zeroPadValue(
-        ethers.toBeHex(BigInt(nullifierHash)),
-        32
-      );
+      const collateral = amountWei / 10n;
+      const nullifierBytes = ethers.zeroPadValue(ethers.toBeHex(BigInt(nullifierHash)), 32);
 
       const tx = await contract.applyForLoan(amountWei, nullifierBytes, {
         value: collateral,
       });
       await tx.wait();
 
-      // SYNC WITH SUPABASE
       const tierId = Number(amountHSK) <= 0.02 ? 'Bronze' : Number(amountHSK) <= 0.05 ? 'Silver' : 'Gold';
       
       await supabase
@@ -283,8 +284,8 @@ export function useApplyForLoan() {
 
       return true;
     } catch (err: any) {
-      console.error("Loan application failed:", err);
-      setError(err?.reason || err?.message || "Loan application failed");
+      console.error("Borrow failed:", err);
+      setError(err?.reason || err?.message || "Network error. Try a smaller loan.");
       return false;
     } finally {
       setLoading(false);

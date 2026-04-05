@@ -1,51 +1,65 @@
 import { NextResponse } from 'next/server';
 
+const RPC_URLS = [
+  'https://testnet.hsk.xyz',
+  'https://rpc.testnet.hsk.xyz',
+];
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
-    // Add a timeout to the fetch request to prevent hanging
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    let lastError: any = null;
 
-    const response = await fetch('https://testnet.hsk.xyz', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    // Try multiple RPC nodes for resilience
+    for (const url of RPC_URLS) {
+      // 3 Retries per node with exponential backoff
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s per attempt
 
-    clearTimeout(timeoutId);
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
 
-    // If the upstream RPC returns an error (like 500, 504, etc)
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Upstream RPC Error:', response.status, errorText);
-      return NextResponse.json(
-        { error: `RPC node returned ${response.status}`, details: errorText.slice(0, 100) },
-        { status: response.status }
-      );
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data = await response.json();
+            return NextResponse.json(data);
+          }
+          
+          const errorText = await response.text();
+          console.warn(`RPC node ${url} failed (attempt ${attempt + 1}):`, response.status, errorText.slice(0, 50));
+          lastError = { status: response.status, text: errorText };
+
+        } catch (error: any) {
+          console.warn(`RPC node ${url} error (attempt ${attempt + 1}):`, error.name === 'AbortError' ? 'Timeout' : error.message);
+          lastError = error;
+          
+          // Exponential backoff between retries (500ms, 1000ms, 1500ms)
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+          }
+        }
+      }
     }
 
-    const text = await response.text();
-    try {
-      const data = JSON.parse(text);
-      return NextResponse.json(data);
-    } catch (parseError) {
-      console.error('RPC JSON Parse Error. Received:', text.slice(0, 200));
-      return NextResponse.json(
-        { error: 'Invalid JSON from RPC node', details: text.slice(0, 100) },
-        { status: 502 } // Bad Gateway
-      );
-    }
+    // If all nodes and all retries fail
+    console.error('All RPC failover attempts exhausted.');
+    return NextResponse.json(
+      { error: 'All RPC nodes are currently timeout/unreachable. Please try again in a few seconds.', details: lastError?.message || 'Network Congestion' },
+      { status: 504 }
+    );
+
   } catch (error: any) {
-    if (error.name === 'AbortError') {
-      return NextResponse.json({ error: 'RPC request timed out' }, { status: 504 });
-    }
-    console.error('RPC Proxy Handler Error:', error);
-    return NextResponse.json({ error: 'Internal Proxy Error' }, { status: 500 });
+    console.error('RPC Proxy Framework Error:', error);
+    return NextResponse.json({ error: 'Internal Proxy Handler Error' }, { status: 500 });
   }
 }
