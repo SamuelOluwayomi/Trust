@@ -6,13 +6,15 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useUserStats } from "@/hooks/useContracts";
 import { ShieldCheck, Certificate } from "@phosphor-icons/react";
 
 export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const { transactions, loans } = useDashboardData();
+  const { transactions } = useDashboardData();
   const { isVerified } = useUserProfile();
+  const { sbtCount, tierName } = useUserStats();
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   
@@ -35,9 +37,6 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
     }
     router.push(`${pathname}?${params.toString()}`);
   };
-
-  const currentTier = isVerified ? "Bronze" : "None";
-  const sbtCount = loans.filter(l => l.status === "Repaid").length;
 
   const walletAddress = wallets[0]?.address;
   const truncatedAddress = walletAddress
@@ -75,7 +74,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           isVerified ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800/50 border-slate-700/50 text-slate-400'
         }`}>
           <ShieldCheck className="w-3.5 h-3.5" weight={isVerified ? "fill" : "regular"} />
-          <span className="text-[10px] font-bold tracking-widest uppercase">{currentTier} Tier</span>
+          <span className="text-[10px] font-bold tracking-widest uppercase">{tierName} Tier</span>
         </div>
 
         {/* SBT Count */}

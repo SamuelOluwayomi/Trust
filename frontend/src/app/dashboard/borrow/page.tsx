@@ -1,17 +1,20 @@
 "use client";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useLending } from "@/hooks/useLending";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useApplyForLoan, useActiveLoan, useUserStats } from "@/hooks/useContracts";
 import LoanTierCard from "@/components/dashboard/LoanTierCard";
 import { ShieldCheck, Info, WarningCircle, Coins } from "@phosphor-icons/react";
 
 export default function BorrowPage() {
-  const { isVerified } = useUserProfile();
-  const { borrow, isBorrowing, isRepaying } = useLending();
-  const { loans } = useDashboardData();
+  const { isVerified, profile } = useUserProfile();
+  const { apply, loading: isBorrowing, error } = useApplyForLoan();
+  const { hasActiveLoan, repaying: isRepaying } = useActiveLoan();
+  const { loanLimit } = useUserStats();
 
-  const activeLoan = loans.find(l => l.status === 'Active');
-
+  const handleBorrow = (amount: number) => {
+    if (profile?.worldid_nullifier) {
+      apply(amount.toString(), profile.worldid_nullifier);
+    }
+  };
   const tiers = [
     { name: "Bronze", limit: "0.02", amount: 0.02 },
     { name: "Silver", limit: "0.05", amount: 0.05 },
@@ -27,10 +30,17 @@ export default function BorrowPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs font-bold flex items-center gap-2">
+          <WarningCircle className="w-5 h-5" />
+          {error}
+        </div>
+      )}
+
       {/* Tiers Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {tiers.map((tier, i) => {
-          const isQualified = isVerified && tier.name === "Bronze"; // Initially only Bronze unlocked on verification
+          const isQualified = isVerified && !hasActiveLoan && Number(loanLimit) >= tier.amount;
           return (
             <LoanTierCard 
               key={tier.name}
@@ -39,7 +49,7 @@ export default function BorrowPage() {
               isQualified={isQualified}
               isBorrowing={isBorrowing}
               isRepaying={isRepaying}
-              onBorrow={borrow}
+              onBorrow={handleBorrow}
               amount={tier.amount}
             />
           );

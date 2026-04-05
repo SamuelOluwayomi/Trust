@@ -1,17 +1,15 @@
 "use client";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useLending } from "@/hooks/useLending";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useActiveLoan } from "@/hooks/useContracts";
 import ActiveLoanCard from "@/components/dashboard/ActiveLoanCard";
-import { Wallet, HandCoins } from "@phosphor-icons/react";
+import { Wallet } from "@phosphor-icons/react";
 import Link from "next/link";
 
 export default function LoansPage() {
   const { isVerified } = useUserProfile();
-  const { borrow, repay, isBorrowing, isRepaying } = useLending();
-  const { loans, loading } = useDashboardData();
+  const { hasActiveLoan, amount, status, repay, repaying, loading } = useActiveLoan();
 
-  const activeLoan = loans.find(l => l.status === 'Active');
+  const activeLoanData = hasActiveLoan ? { amount: Number(amount), amount_paid: 0, id: 'chain-active' } : null;
 
   if (loading) {
     return (
@@ -30,13 +28,13 @@ export default function LoansPage() {
         </div>
       </div>
 
-      {activeLoan ? (
+      {hasActiveLoan ? (
         <div className="max-w-2xl">
           <ActiveLoanCard 
-            activeLoan={activeLoan} 
+            activeLoan={activeLoanData} 
             isVerified={isVerified}
-            isRepaying={isRepaying}
-            isBorrowing={isBorrowing}
+            isRepaying={repaying}
+            isBorrowing={false}
             onRepay={repay}
           />
         </div>

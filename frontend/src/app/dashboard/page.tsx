@@ -1,32 +1,31 @@
 "use client";
 
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { useLending } from "@/hooks/useLending";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { usePrivy } from "@privy-io/react-auth";
+import { useUserStats, useActiveLoan } from "@/hooks/useContracts";
 import StatsOverview from "@/components/dashboard/StatsOverview";
 import ActiveLoanCard from "@/components/dashboard/ActiveLoanCard";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
-import { ShieldCheck, LockKey, CheckCircle, Clock } from "@phosphor-icons/react";
+import { ShieldCheck, LockKey, CheckCircle } from "@phosphor-icons/react";
 import WorldIDVerify from "@/components/WorldIDVerify";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useDashboardData } from "@/hooks/useDashboardData"; // Keep for history/transactions
 
 export default function DashboardOverview() {
-  const { isVerified, verify, profile } = useUserProfile();
-  const { borrow, repay, isBorrowing, isRepaying } = useLending();
-  const { loans, transactions, loading } = useDashboardData();
+  const { isVerified, verify } = useUserProfile();
+  const { sbtCount, totalBorrowed, totalRepaid, loanLimit, tierName, loading: statsLoading } = useUserStats();
+  const { hasActiveLoan, amount, daysLeft, repay, repaying, loading: loanLoading } = useActiveLoan();
+  const { transactions, loading: historyLoading } = useDashboardData();
 
-  const totalBorrowedAmount = loans.reduce((acc, loan) => acc + Number(loan.amount), 0);
-  const totalDueAmount = loans.reduce((acc, loan) => acc + (Number(loan.amount) - Number(loan.amount_paid)), 0);
-  const activeLoan = loans.find(l => l.status === 'Active');
-  const totalSbts = loans.filter(l => l.status === 'Repaid').length;
-  const currentTier = isVerified ? "Bronze" : "None";
+  const totalDueAmount = Number(totalBorrowed) - Number(totalRepaid);
+  const activeLoanData = hasActiveLoan ? { amount: Number(amount), amount_paid: 0, id: 'chain-active' } : null;
 
   const dynamicHistoryData = transactions.length > 0 
     ? transactions.filter(tx => tx.type === 'repay').map((tx, idx) => ({ date: `Tx ${idx+1}`, amount: tx.amount }))
     : [{ date: 'No Data', amount: 0 }];
 
-  if (loading) {
+  if (statsLoading || loanLoading || historyLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-emerald-500 text-sm tracking-widest animate-pulse font-black uppercase">Loading Dashboard...</div>
@@ -80,21 +79,21 @@ export default function DashboardOverview() {
 
         {/* Active Loan Card */}
         <ActiveLoanCard 
-           activeLoan={activeLoan} 
+           activeLoan={activeLoanData} 
            isVerified={isVerified}
-           isRepaying={isRepaying}
-           isBorrowing={isBorrowing}
+           isRepaying={repaying}
+           isBorrowing={false}
            onRepay={repay}
         />
       </div>
 
       {/* 2. Stats Row */}
       <StatsOverview 
-        totalBorrowed={totalBorrowedAmount}
+        totalBorrowed={Number(totalBorrowed)}
         totalDue={totalDueAmount}
-        totalSbts={totalSbts}
+        totalSbts={sbtCount}
         isVerified={isVerified}
-        tier={currentTier}
+        tier={tierName}
       />
 
       {/* 3. Analytics Section */}
