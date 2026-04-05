@@ -1,3 +1,8 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
 import Navbar from "@/components/Navbar";
 import Background from "@/components/Background";
 import Hero from "@/components/Hero";
@@ -8,6 +13,21 @@ import FAQ from "@/components/FAQ";
 import SplashLoader from "@/components/SplashLoader";
 
 export default function Home() {
+  const { authenticated, ready, user } = usePrivy();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Only redirect if authenticated AND wallet is ready (prevents "Creating your wallet" hang)
+    if (ready && authenticated && user?.wallet) {
+      router.replace("/dashboard");
+    }
+  }, [ready, authenticated, user?.wallet, router]);
+
+  // If we are redirecting, we can show a loader or nothing to avoid flicker
+  if (ready && authenticated) {
+    return <SplashLoader />;
+  }
+
   return (
     <main className="min-h-screen overflow-clip text-white selection:bg-emerald-500/30 selection:text-white">
       <SplashLoader />

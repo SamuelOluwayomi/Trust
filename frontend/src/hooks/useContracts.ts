@@ -14,14 +14,18 @@ import {
 
 // --- FAUCET ---
 export function useFaucet() {
+  const { user } = usePrivy();
   const { wallets } = useWallets();
-  const address = wallets[0]?.address;
+  const address = user?.wallet?.address;
   const [timeUntilClaim, setTimeUntilClaim] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!address) return;
+    if (!address) {
+      setLoading(false);
+      return;
+    }
     const fetch = async () => {
       try {
         const contract = getFaucetContract();
@@ -58,8 +62,9 @@ export function useFaucet() {
 
 // --- USER STATS ---
 export function useUserStats() {
+  const { user } = usePrivy();
   const { wallets } = useWallets();
-  const address = wallets[0]?.address;
+  const address = user?.wallet?.address;
 
   const [stats, setStats] = useState({
     sbtCount: 0,
@@ -74,7 +79,10 @@ export function useUserStats() {
   const TIER_NAMES = ["None", "Bronze", "Silver", "Gold"];
 
   useEffect(() => {
-    if (!address) return;
+    if (!address) {
+      setLoading(false);
+      return;
+    }
     const fetch = async () => {
       try {
         const sbtContract = getLoanSBTContract();
@@ -114,7 +122,7 @@ export function useUserStats() {
 export function useActiveLoan() {
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const address = wallets[0]?.address;
+  const address = user?.wallet?.address;
 
   const [loan, setLoan] = useState<{
     id?: string;
@@ -138,7 +146,10 @@ export function useActiveLoan() {
   const [repaying, setRepaying] = useState(false);
 
   useEffect(() => {
-    if (!address || !user) return;
+    if (!address) {
+      setLoading(false);
+      return;
+    }
     const fetch = async () => {
       try {
         const contract = getLoanManagerContract();

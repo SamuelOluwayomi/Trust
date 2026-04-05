@@ -22,31 +22,57 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Sync internal state with URL on mount or change
+  // Sync internal state with URL on mount only
   useEffect(() => {
-    setSearchValue(searchParams.get("q") || "");
-  }, [searchParams]);
+    const q = searchParams.get("q");
+    if (q) setSearchValue(q);
+  }, []); // Only on mount
+
+  // Debounce URL update
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (searchValue) {
+        params.set("q", searchValue);
+      } else {
+        params.delete("q");
+      }
+      
+      // Update URL without a full page reload or scroll jump
+      const newUrl = `${pathname}?${params.toString()}`;
+      if (window.location.search !== `?${params.toString()}`) {
+        router.replace(newUrl, { scroll: false });
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchValue, pathname, router, searchParams]);
 
   const handleSearch = (val: string) => {
     setSearchValue(val);
-    const params = new URLSearchParams(searchParams.toString());
-    if (val) {
-      params.set("q", val);
-    } else {
-      params.delete("q");
-    }
-    router.push(`${pathname}?${params.toString()}`);
   };
 
-  const walletAddress = wallets[0]?.address;
-  const truncatedAddress = walletAddress
-    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-    : "Not connected";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (user?.wallet?.address) {
+      navigator.clipboard.writeText(user.wallet.address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const primaryWallet = user?.wallet?.address;
+  const userEmail = user?.email?.address || user?.google?.email;
+  
+  const truncatedAddress = primaryWallet
+    ? `${primaryWallet.slice(0, 6)}...${primaryWallet.slice(-4)}`
+    : "No Wallet";
 
   return (
     <header className="h-20 lg:ml-64 bg-[#0a0f1e]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-30">
       
-      {/* Left items - Hamburger & Search roughly */}
+      {/* Left items - Hamburger & Search */}
       <div className="flex items-center gap-4 flex-1">
         <button 
           onClick={onMenuClick}
@@ -66,7 +92,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         </div>
       </div>
 
-      {/* Right items - User Profile & Context */}
+      {/* Right items */}
       <div className="flex items-center gap-6">
         
         {/* Tier Badge */}
@@ -118,17 +144,24 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
 
         {/* Profile / Wallet */}
         <div className="flex items-center gap-3 pl-6 border-l border-white/10">
-          <div className="flex-col items-end hidden md:flex">
-            <span className="text-xs font-bold text-white">{truncatedAddress}</span>
-            <span className="text-[10px] text-emerald-400 font-medium">Connected</span>
+          <div className="hidden md:flex flex-col items-end">
+            {userEmail && <span className="text-[10px] text-slate-400 font-medium truncate max-w-[120px]">{userEmail}</span>}
+            <div className="flex items-center gap-2 group cursor-pointer" onClick={handleCopy}>
+              <span className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{truncatedAddress}</span>
+              <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${copied ? 'bg-emerald-500 text-black' : 'bg-white/5 text-slate-500'} transition-all`}>
+                {copied ? 'Copied' : 'Copy'}
+              </span>
+            </div>
           </div>
-          <button className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center border-2 border-[#0a0f1e] shadow-[0_0_0_2px_rgba(255,255,255,0.1)]">
-            <Wallet className="w-5 h-5 text-white" weight="fill" />
+          <button 
+            onClick={handleCopy}
+            className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-emerald-700 flex items-center justify-center border border-white/10 shadow-lg"
+          >
+            <Wallet className="w-5 h-5 text-[#020617]" weight="fill" />
           </button>
         </div>
 
       </div>
-
     </header>
   );
 }

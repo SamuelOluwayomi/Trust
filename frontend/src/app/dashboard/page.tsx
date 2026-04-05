@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { useUserStats, useActiveLoan } from "@/hooks/useContracts";
 import StatsOverview from "@/components/dashboard/StatsOverview";
@@ -17,12 +18,20 @@ export default function DashboardOverview() {
   const { sbtCount, totalBorrowed, totalRepaid, loanLimit, tierName, loading: statsLoading } = useUserStats();
   const { hasActiveLoan, amount, daysLeft, repay, repaying, loading: loanLoading } = useActiveLoan();
   const { transactions, loading: historyLoading } = useDashboardData();
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q")?.toLowerCase() || "";
 
   const totalDueAmount = Number(totalBorrowed) - Number(totalRepaid);
   const activeLoanData = hasActiveLoan ? { amount: Number(amount), amount_paid: 0, id: 'chain-active' } : null;
 
-  const dynamicHistoryData = transactions.length > 0 
-    ? transactions.filter(tx => tx.type === 'repay').map((tx, idx) => ({ date: `Tx ${idx+1}`, amount: tx.amount }))
+  // Filter transactions for charts based on query
+  const filteredTransactions = transactions.filter(tx => 
+    tx.type.toLowerCase().includes(query) || 
+    tx.amount.toString().includes(query)
+  );
+
+  const dynamicHistoryData = filteredTransactions.length > 0 
+    ? filteredTransactions.filter(tx => tx.type === 'repay').map((tx, idx) => ({ date: `Tx ${idx+1}`, amount: tx.amount }))
     : [{ date: 'No Data', amount: 0 }];
 
   if (statsLoading || loanLoading || historyLoading) {

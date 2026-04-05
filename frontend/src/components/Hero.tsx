@@ -1,28 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronRight, Zap, Lock, TrendingUp } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import React from "react";
-
-const Feature = ({ icon: Icon, title, desc }: { icon: React.ComponentType<{ className?: string }>; title: string; desc: string }) => (
-  <motion.div
-    initial={{ opacity: 0, x: -20 }}
-    whileInView={{ opacity: 1, x: 0 }}
-    transition={{ duration: 0.5 }}
-    viewport={{ once: true }}
-    className="flex items-start gap-4 group"
-  >
-    <div className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl bg-emerald-500/10 group-hover:bg-emerald-500/25 border border-emerald-500/10 transition-all duration-300">
-      <Icon className="w-5 h-5 text-emerald-400" />
-    </div>
-    <div className="flex flex-col gap-1">
-      <h3 className="text-[17px] font-bold text-white/90 tracking-tight">{title}</h3>
-      <p className="text-[15px] leading-relaxed text-slate-400">{desc}</p>
-    </div>
-  </motion.div>
-);
+import { usePrivy } from "@privy-io/react-auth";
+import { useRouter } from "next/navigation";
 
 export default function Hero() {
+  const { login, authenticated } = usePrivy();
+  const router = useRouter();
+
+  const handleGetStarted = () => {
+    if (authenticated) {
+      router.push("/dashboard");
+    } else {
+      login();
+    }
+  };
+
   return (
     <section className="relative z-10 min-h-screen flex items-center px-6 pt-5 pb-2 overflow-hidden">
       {/* Subtle Background Overlay for minimum text contrast */}
@@ -76,7 +71,10 @@ export default function Hero() {
             transition={{ duration: 0.8, delay: 0.55 }}
             className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 pt-1 w-full max-w-sm sm:max-w-none mx-auto"
           >
-            <button className="flex items-center justify-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-[#020617] text-[15px] font-black px-6 sm:px-10 py-4 rounded-full transition-all duration-300 hover:scale-[1.04] active:scale-95 group shadow-2xl shadow-emerald-500/25 uppercase tracking-wide">
+            <button 
+              onClick={handleGetStarted}
+              className="flex items-center justify-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-[#020617] text-[15px] font-black px-6 sm:px-10 py-4 rounded-full transition-all duration-300 hover:scale-[1.04] active:scale-95 group shadow-2xl shadow-emerald-500/25 uppercase tracking-wide"
+            >
               Get a Loan
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>

@@ -1,11 +1,19 @@
 "use client";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { ClockCounterClockwise, CheckCircle } from "@phosphor-icons/react";
+import { useSearchParams } from "next/navigation";
 
 export default function HistoryPage() {
   const { loans, loading } = useDashboardData();
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q")?.toLowerCase() || "";
 
   const repaidLoans = loans.filter(l => l.status === 'Repaid');
+  const filteredLoans = repaidLoans.filter(l => 
+    l.amount.toString().includes(query) || 
+    l.tier.toLowerCase().includes(query) || 
+    l.id.toLowerCase().includes(query)
+  );
 
   if (loading) {
     return (
@@ -25,7 +33,7 @@ export default function HistoryPage() {
       </div>
 
       <div className="bg-[#050914] border border-white/5 rounded-3xl overflow-hidden">
-        {repaidLoans.length > 0 ? (
+        {filteredLoans.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -38,7 +46,7 @@ export default function HistoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {repaidLoans.map((loan) => (
+                {filteredLoans.map((loan) => (
                   <tr key={loan.id} className="hover:bg-white/2 transition-colors">
                     <td className="px-6 py-4 text-xs font-medium text-slate-300">
                       {new Date(loan.created_at).toLocaleDateString()}
@@ -69,9 +77,13 @@ export default function HistoryPage() {
               <ClockCounterClockwise className="w-10 h-10 text-slate-600" weight="duotone" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-bold text-white uppercase tracking-widest">No History Found</h3>
+              <h3 className="text-xl font-bold text-white uppercase tracking-widest">
+                {repaidLoans.length > 0 ? "No Matching Results" : "No History Found"}
+              </h3>
               <p className="text-slate-500 max-w-xs mx-auto">
-                Successfully repaid loans will appear here as Soul-Bound Token receipts of your creditworthiness.
+                {repaidLoans.length > 0 
+                  ? "We couldn't find any repayments matching your search query." 
+                  : "Successfully repaid loans will appear here as Soul-Bound Token receipts of your creditworthiness."}
               </p>
             </div>
           </div>
