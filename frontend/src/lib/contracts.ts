@@ -28,9 +28,10 @@ export const LOAN_MANAGER_ABI = [
   "function getUserTier(address user) external view returns (uint8)",
   "function getLoanLimit(address user) external view returns (uint256)",
   "function getDaysUntilDue(address user) external view returns (uint256)",
-  "function totalBorrowed(address) external view returns (uint256)",
   "function totalRepaid(address) external view returns (uint256)",
   "function blacklisted(address) external view returns (bool)",
+  "event LoanApplied(address indexed user, uint256 amount, uint8 tier, bytes32 nullifier)",
+  "event LoanRepaid(address indexed user, uint256 amount)",
 ];
 
 // Get a provider connected to HashKey testnet

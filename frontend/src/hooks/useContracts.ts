@@ -10,6 +10,7 @@ import {
   getLoanSBTContract,
   getLoanManagerContract,
   getLoanManagerContractSigned,
+  getProvider,
 } from "@/lib/contracts";
 
 // --- FAUCET ---
@@ -72,6 +73,7 @@ export function useUserStats() {
     totalBorrowed: "0",
     totalRepaid: "0",
     loanLimit: "0",
+    balance: "0", // Local HSK Balance
     blacklisted: false,
   });
   const [loading, setLoading] = useState(true);
@@ -87,8 +89,9 @@ export function useUserStats() {
       try {
         const sbtContract = getLoanSBTContract();
         const loanContract = getLoanManagerContract();
+        const provider = getProvider();
 
-        const [sbtCount, tier, totalBorrowed, totalRepaid, loanLimit, blacklisted] =
+        const [sbtCount, tier, totalBorrowed, totalRepaid, loanLimit, blacklisted, balance] =
           await Promise.all([
             sbtContract.getUserSBTCount(address),
             loanContract.getUserTier(address),
@@ -96,6 +99,7 @@ export function useUserStats() {
             loanContract.totalRepaid(address),
             loanContract.getLoanLimit(address),
             loanContract.blacklisted(address),
+            provider.getBalance(address),
           ]);
 
         setStats({
@@ -104,6 +108,7 @@ export function useUserStats() {
           totalBorrowed: ethers.formatEther(totalBorrowed),
           totalRepaid: ethers.formatEther(totalRepaid),
           loanLimit: ethers.formatEther(loanLimit),
+          balance: ethers.formatEther(balance),
           blacklisted,
         });
       } catch (err) {

@@ -15,7 +15,7 @@ import { useDashboardData } from "@/hooks/useDashboardData"; // Keep for history
 
 export default function DashboardOverview() {
   const { isVerified, verify } = useUserProfile();
-  const { sbtCount, totalBorrowed, totalRepaid, loanLimit, tierName, loading: statsLoading } = useUserStats();
+  const { sbtCount, totalBorrowed, totalRepaid, loanLimit, tierName, balance, loading: statsLoading } = useUserStats();
   const { hasActiveLoan, amount, daysLeft, repay, repaying, loading: loanLoading } = useActiveLoan();
   const { transactions, loading: historyLoading } = useDashboardData();
   const searchParams = useSearchParams();
@@ -101,6 +101,7 @@ export default function DashboardOverview() {
         totalBorrowed={Number(totalBorrowed)}
         totalDue={totalDueAmount}
         totalSbts={sbtCount}
+        hskBalance={Number(balance)}
         isVerified={isVerified}
         tier={tierName}
       />

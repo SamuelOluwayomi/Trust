@@ -66,9 +66,9 @@ export function useUserProfile() {
         .from('users')
         .upsert({
           privy_id: user.id,
-          wallet_address: wallets[0]?.address || null,
+          wallet_address: user.wallet?.address || wallets[0]?.address || null,
           worldid_nullifier: nullifier,
-        }, { onConflict: 'worldid_nullifier' }) // Tie identity to worldid_nullifier to fix 409 conflict
+        }, { onConflict: 'privy_id' }) // Ensure we update the unique record for this user
         .select()
         .single();
         

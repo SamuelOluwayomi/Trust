@@ -115,18 +115,6 @@ export default function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean,
         <div>
           <p className="px-4 text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-3">Tools</p>
           <div className="space-y-1">
-            {/* Finalize Wallet Setup if no wallet exists */}
-            {user && !user.wallet && (
-              <button
-                onClick={() => createWallet()}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all duration-300 shadow-[0_0_15px_rgba(16,185,129,0.1)] mb-4 animate-pulse hover:animate-none"
-              >
-                <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-                  <Wallet className="w-3 h-3 text-black" weight="fill" />
-                </div>
-                Finalize Wallet Setup
-              </button>
-            )}
 
             {TOOLS_ITEMS.map((item) => (
               <NavItem key={item.label} item={item} />

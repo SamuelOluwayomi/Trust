@@ -13,12 +13,20 @@ interface StatsOverviewProps {
   totalBorrowed: number;
   totalDue: number;
   totalSbts: number;
+  hskBalance: number;
   isVerified: boolean;
   tier: string;
 }
 
-export default function StatsOverview({ totalBorrowed, totalDue, totalSbts, isVerified, tier }: StatsOverviewProps) {
+export default function StatsOverview({ totalBorrowed, totalDue, totalSbts, hskBalance, isVerified, tier }: StatsOverviewProps) {
   const stats: StatItem[] = [
+    { 
+      label: "Wallet Balance", 
+      value: `${hskBalance.toFixed(4)} HSK`, 
+      change: "LIVE", 
+      positive: true, 
+      icon: HandCoins 
+    },
     { 
       label: "Total Borrowed", 
       value: totalBorrowed > 0 ? `${totalBorrowed} HSK` : "0 HSK", 

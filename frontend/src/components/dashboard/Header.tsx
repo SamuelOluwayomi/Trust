@@ -14,7 +14,8 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { wallets } = useWallets();
   const { transactions } = useDashboardData();
   const { isVerified } = useUserProfile();
-  const { sbtCount, tierName } = useUserStats();
+  const { sbtCount, tierName, balance } = useUserStats();
+  const { createWallet } = usePrivy();
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   
@@ -95,6 +96,17 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
       {/* Right items */}
       <div className="flex items-center gap-6">
         
+        {/* Mobile Setup Wallet Button - High Visibility */}
+        {user && !user.wallet && (
+          <button
+            onClick={() => createWallet()}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500 text-[#020617] text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse hover:animate-none"
+          >
+            <Wallet className="w-3 h-3" weight="fill" />
+            Setup Wallet
+          </button>
+        )}
+
         {/* Tier Badge */}
         <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors ${
           isVerified ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800/50 border-slate-700/50 text-slate-400'
@@ -145,7 +157,11 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         {/* Profile / Wallet */}
         <div className="flex items-center gap-3 pl-6 border-l border-white/10">
           <div className="hidden md:flex flex-col items-end">
-            {userEmail && <span className="text-[10px] text-slate-400 font-medium truncate max-w-[120px]">{userEmail}</span>}
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-[10px] text-emerald-400 font-black tracking-widest uppercase">{Number(balance).toFixed(4)} HSK</span>
+              <div className="w-1 h-1 rounded-full bg-slate-700" />
+              {userEmail && <span className="text-[10px] text-slate-400 font-medium truncate max-w-[100px]">{userEmail}</span>}
+            </div>
             <div className="flex items-center gap-2 group cursor-pointer" onClick={handleCopy}>
               <span className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{truncatedAddress}</span>
               <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${copied ? 'bg-emerald-500 text-black' : 'bg-white/5 text-slate-500'} transition-all`}>
