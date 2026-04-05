@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 contract Faucet {
-    uint256 public constant DRIP_AMOUNT = 100 ether; // 100 HSK
+    uint256 public constant DRIP_AMOUNT = 0.002 ether; // 0.002 HSK
     uint256 public constant COOLDOWN = 24 hours;
 
     mapping(address => uint256) public lastClaim;
