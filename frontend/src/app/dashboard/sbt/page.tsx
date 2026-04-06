@@ -1,9 +1,11 @@
 "use client";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { Certificate, ShieldCheck, Browsers } from "@phosphor-icons/react";
+import { Certificate } from "@phosphor-icons/react";
+import { usePrivy } from "@privy-io/react-auth";
 
 export default function SBTPage() {
   const { loans, loading } = useDashboardData();
+  const { user } = usePrivy();
 
   const repaidLoans = loans.filter(l => l.status === 'Repaid');
 
@@ -14,6 +16,9 @@ export default function SBTPage() {
       </div>
     );
   }
+
+  // Use the verified wallet address from Privy for explorer links
+  const walletAddress = user?.wallet?.address;
 
   return (
     <div className="space-y-6">
@@ -46,9 +51,20 @@ export default function SBTPage() {
                      <span className="text-white">{loan.amount} HSK</span>
                   </div>
                </div>
-               <button className="w-full py-2 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-500/20 mt-4">
-                  View on Explorer
-               </button>
+               {walletAddress ? (
+                 <a 
+                   href={`https://testnet-explorer.hsk.xyz/address/${walletAddress}`}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="w-full py-2 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-500/20 mt-4 text-center block hover:bg-emerald-500/20 transition-all font-sans"
+                 >
+                    View on Explorer
+                 </a>
+               ) : (
+                 <div className="w-full py-2 bg-white/5 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-lg border border-white/10 mt-4 text-center">
+                    Wallet Not Connected
+                 </div>
+               )}
             </div>
           ))
         ) : (
