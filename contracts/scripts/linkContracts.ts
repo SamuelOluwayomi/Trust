@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const LOAN_SBT_ADDRESS = "0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74";
-const LOAN_MANAGER_ADDRESS = "0xE80197da2Ce1E8ee156bE3F7d04795a7B227a1Bf";
+const LOAN_MANAGER_ADDRESS = "0x1f093A6C32e908e41A8f884581FE7443A403736d";
 
 const ABI = [
   "function setLoanManager(address _loanManager) external",

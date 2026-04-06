@@ -1,49 +1,44 @@
 import { ethers } from "ethers";
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 dotenv.config();
 
-const RPC_URL = "https://testnet.hsk.xyz";
-const LOAN_MANAGER_ADDRESS = "0xE80197da2Ce1E8ee156bE3F7d04795a7B227a1Bf";
+const LOAN_SBT = "0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74";
+const LOAN_MANAGER = "0x1f093A6C32e908e41A8f884581FE7443A403736d";
+const USER = "0x6e6f9005aDAA32650AEF2319bfE5c62258E5a413"; // from your error
+
+const provider = new ethers.JsonRpcProvider("https://testnet.hsk.xyz");
+
+const SBT_ABI = [
+  "function loanManager() view returns (address)",
+];
+
+const MANAGER_ABI = [
+  "function getActiveLoan(address) view returns (tuple(uint256 amount, uint256 collateral, uint256 startTime, uint256 dueDate, uint8 tier, uint8 status))",
+  "function blacklisted(address) view returns (bool)",
+  "function usedNullifiers(bytes32) view returns (bool)",
+];
 
 async function main() {
-  const provider = new ethers.JsonRpcProvider(RPC_URL, { chainId: 133, name: 'hashkey_testnet' }, { staticNetwork: true });
-  
-  // Use lowercase to avoid checksum errors in the diagnostic tool
-  const loanManager = ethers.getAddress(LOAN_MANAGER_ADDRESS.toLowerCase());
-  const testUser = ethers.getAddress("0x6e6f9005adaa32650aef2319bfe5c62258e5a413");
+  const sbt = new ethers.Contract(LOAN_SBT, SBT_ABI, provider);
+  const manager = new ethers.Contract(LOAN_MANAGER, MANAGER_ABI, provider);
 
-  console.log("--- FINAL DIAGNOSTIC ---");
-  console.log("LoanManager:", loanManager);
-  console.log("User:", testUser);
+  // Check linking
+  const linkedManager = await sbt.loanManager();
+  console.log("LoanManager set in SBT:", linkedManager);
+  console.log("Expected (Your New One):", LOAN_MANAGER);
+  console.log("Linked correctly:", linkedManager.toLowerCase() === LOAN_MANAGER.toLowerCase());
 
-  const abi = [
-    "function sbtContract() view returns (address)",
-    "function getUserTier(address) view returns (uint8)",
-    "function blacklisted(address) view returns (bool)",
-    "function activeLoans(address) view returns (uint256 amount, uint256 collateral, uint256 startTime, uint256 dueDate, uint8 tier, uint8 status)"
-  ];
+  // Check user's active loan
+  const loan = await manager.getActiveLoan(USER);
+  console.log("\nUser active loan:");
+  console.log("  Amount:", ethers.formatEther(loan.amount), "HSK");
+  console.log("  Collateral:", ethers.formatEther(loan.collateral), "HSK");
+  console.log("  Status:", loan.status.toString()); // 1 = Active
+  console.log("  Tier:", loan.tier.toString());
 
-  const contract = new ethers.Contract(loanManager, abi, provider);
-
-  try {
-    const sbtAddr = await contract.sbtContract();
-    console.log("Linked SBT Address:", sbtAddr);
-    
-    const balance = await provider.getBalance(loanManager);
-    console.log("Contract Liquidity:", ethers.formatUnits(balance, 18), "HSK");
-
-    const blacklisted = await contract.blacklisted(testUser);
-    console.log("User Blacklisted:", blacklisted);
-
-    const tier = await contract.getUserTier(testUser);
-    console.log("User Tier Result:", tier.toString());
-
-    const loan = await contract.activeLoans(testUser);
-    console.log("User Loan Status:", loan.status.toString());
-
-  } catch (err: any) {
-    console.error("\n❌ FAILED:", err.message);
-  }
+  // Check blacklist
+  const isBlacklisted = await manager.blacklisted(USER);
+  console.log("\nBlacklisted:", isBlacklisted);
 }
 
 main().catch(console.error);
