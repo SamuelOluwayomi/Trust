@@ -150,8 +150,15 @@ export function useLending() {
       const signer = await getPrivySigner(wallet);
       const contract = new ethers.Contract(LOAN_MANAGER_ADDRESS, LOAN_MANAGER_ABI, signer);
 
-      const amountWei = ethers.parseEther(amountHSK.toString());
-      const tx = await contract.repayLoan({ value: amountWei });
+      const address = await signer.getAddress();
+      
+      // Get the active loan to know exact amount
+      const loan = await contract.getActiveLoan(address);
+      console.log("On-chain loan amount to repay:", ethers.formatEther(loan.amount));
+
+      const tx = await contract.repayLoan({
+        value: loan.amount // Send exact loan amount needed
+      });
       await tx.wait();
 
       if (loanId) {
