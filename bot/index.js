@@ -40,8 +40,8 @@ const loanManager = new ethers.Contract(
 const loanSBT = new ethers.Contract(LOAN_SBT_ADDRESS, LOAN_SBT_ABI, provider);
 
 // ── Helpers ────────────────────────────────────────────
-const TIER_NAMES = ["Bronze", "Silver", "Gold"];
-const TIER_EMOJI = ["🥉", "🥈", "🥇"];
+const TIER_NAMES = ["None", "Bronze", "Silver", "Gold"];
+const TIER_EMOJI = ["⬜", "🥉", "🥈", "🥇"];
 const STATUS_NAMES = ["None", "Active", "Repaid", "Defaulted"];
 
 async function getWallet(telegramId) {
@@ -50,7 +50,7 @@ async function getWallet(telegramId) {
   
   const { data, error } = await supabase
     .from("users")
-    .select("wallet_address, display_name")
+    .select("wallet_address")
     .eq("telegram_id", tId)
     .maybeSingle();
 
@@ -86,8 +86,7 @@ async function saveWallet(telegramId, walletAddress, username) {
     const { error } = await supabase
       .from("users")
       .update({ 
-        telegram_id: tId,
-        display_name: username || null 
+        telegram_id: tId
       })
       .eq("id", existingWallet.id);
 
@@ -98,8 +97,7 @@ async function saveWallet(telegramId, walletAddress, username) {
     const { error } = await supabase.from("users").upsert(
       {
         telegram_id: tId,
-        wallet_address: walletAddress, // Keep original case for storage
-        display_name: username || null,
+        wallet_address: walletAddress // Keep original case for storage
       },
       { onConflict: "telegram_id" }
     );

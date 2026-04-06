@@ -98,7 +98,7 @@ export function useUserStats() {
   });
   const [loading, setLoading] = useState(true);
 
-  const TIER_NAMES = ["Bronze", "Silver", "Gold"];
+  const TIER_NAMES = ["None", "Bronze", "Silver", "Gold"];
 
   useEffect(() => {
     if (!address) {
@@ -131,6 +131,7 @@ export function useUserStats() {
           balance: ethers.formatEther(balance),
           blacklisted,
         });
+        console.log(`[DEBUG] On-Chain Tier Index: ${Number(tier)}, SBTs: ${Number(sbtCount)}`);
       } catch (err) {
         console.error("Stats sync failed:", err);
       } finally {
