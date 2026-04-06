@@ -32,7 +32,7 @@ export default function SendFundsModal({ isOpen, onClose, userBalance }: SendFun
   };
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
         onClick={!isSending ? onClose : undefined} 

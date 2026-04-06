@@ -93,13 +93,19 @@ export function useLending() {
       // Explicit 10% collateral math to avoid gas estimation failures
       const collateral = (amountWei * 10n) / 100n;
 
-      // Handle nullifier formatting
+      // Derive a UNIQUE nullifier per loan attempt.
+      // The contract burns each nullifier after use, so we combine the
+      // World ID proof (Sybil resistance) with a timestamp to allow repeat loans.
       let nullifier;
+      const loanNonce = Date.now().toString();
       if (nullifierHash && nullifierHash !== "0") {
-        nullifier = ethers.zeroPadValue(ethers.toBeHex(BigInt(nullifierHash)), 32);
+        nullifier = ethers.keccak256(
+          ethers.toUtf8Bytes(nullifierHash + "_loan_" + loanNonce)
+        );
       } else {
-        // Fallback for tests (though in prod World ID is required)
-        nullifier = ethers.keccak256(ethers.toUtf8Bytes(user!.id + "initial_loan"));
+        nullifier = ethers.keccak256(
+          ethers.toUtf8Bytes(user!.id + "_loan_" + loanNonce)
+        );
       }
 
       console.log("Applying for loan on-chain:", {

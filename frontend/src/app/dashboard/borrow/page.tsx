@@ -10,6 +10,7 @@ export default function BorrowPage() {
   const { isVerified, profile } = useUserProfile();
   const { borrow, isBorrowing, isRepaying, error, getStats } = useLending();
   const [stats, setStats] = useState<any>(null);
+  const [activeBorrowTier, setActiveBorrowTier] = useState<string | null>(null);
 
   // Sync real-time on-chain stats (Tier, Limits)
   useEffect(() => {
@@ -20,10 +21,11 @@ export default function BorrowPage() {
     sync();
   }, [getStats, isBorrowing]);
 
-  const handleBorrow = async (amount: number) => {
+  const handleBorrow = async (amount: number, tierName: string) => {
     if (!isVerified) return;
-    // Pass the real World ID nullifier stored in Supabase
+    setActiveBorrowTier(tierName);
     const success = await borrow(amount, profile?.worldid_nullifier || undefined);
+    setActiveBorrowTier(null);
     if (success) {
       window.location.href = "/dashboard/loans";
     }
@@ -66,9 +68,9 @@ export default function BorrowPage() {
               tier={tier.name}
               limit={tier.limit}
               isQualified={isQualified}
-              isBorrowing={isBorrowing}
+              isBorrowing={activeBorrowTier === tier.name}
               isRepaying={isRepaying}
-              onBorrow={() => handleBorrow(tier.amount)}
+              onBorrow={() => handleBorrow(tier.amount, tier.name)}
               amount={tier.amount}
             />
           );
