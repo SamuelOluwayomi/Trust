@@ -26,7 +26,7 @@ export default function SendFundsModal({ isOpen, onClose, userBalance }: SendFun
       setTimeout(() => {
         setSuccess(false);
         onClose();
-        window.location.reload(); // Refresh to show new balance
+        window.location.reload();
       }, 2000);
     }
   };
@@ -38,14 +38,14 @@ export default function SendFundsModal({ isOpen, onClose, userBalance }: SendFun
         onClick={!isSending ? onClose : undefined} 
       />
       
-      <div className="relative w-full max-w-md bg-[#050914] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-md bg-[#050914] border border-emerald-500/20 rounded-[2.5rem] p-8 shadow-2xl shadow-emerald-500/5 overflow-hidden">
         {/* Background Glow */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[50px] -mr-10 -mt-10" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] -mr-10 -mt-10" />
         
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <PaperPlaneTilt className="w-6 h-6 text-blue-400" weight="fill" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+              <PaperPlaneTilt className="w-6 h-6 text-emerald-400" weight="fill" />
             </div>
             <h2 className="text-lg font-black text-white uppercase tracking-widest">Send HSK</h2>
           </div>
@@ -79,7 +79,7 @@ export default function SendFundsModal({ isOpen, onClose, userBalance }: SendFun
                 placeholder="0x..."
                 value={recipient}
                 onChange={(e) => setRecipient(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 transition-colors font-mono"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50 transition-colors font-mono"
               />
             </div>
 
@@ -87,7 +87,7 @@ export default function SendFundsModal({ isOpen, onClose, userBalance }: SendFun
             <div className="space-y-2">
               <div className="flex justify-between items-center px-1">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</label>
-                <span className="text-[10px] font-bold text-slate-600">Balance: {userBalance} HSK</span>
+                <span className="text-[10px] font-bold text-slate-600">Balance: {Number(userBalance).toFixed(4)} HSK</span>
               </div>
               <div className="relative">
                 <input 
@@ -97,12 +97,12 @@ export default function SendFundsModal({ isOpen, onClose, userBalance }: SendFun
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50 transition-colors"
                 />
                 <button 
                   type="button"
                   onClick={() => setAmount(userBalance)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-400 uppercase tracking-widest hover:text-blue-300 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-emerald-400 uppercase tracking-widest hover:text-emerald-300 transition-colors"
                 >
                   Max
                 </button>
@@ -119,7 +119,7 @@ export default function SendFundsModal({ isOpen, onClose, userBalance }: SendFun
             <button
               disabled={isSending}
               type="submit"
-              className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white font-black uppercase tracking-[0.2em] rounded-2xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)]"
+              className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-500/50 text-[#050914] font-black uppercase tracking-[0.2em] rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]"
             >
               {isSending ? "Processing..." : "Confirm Transfer"}
             </button>
