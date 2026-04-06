@@ -521,6 +521,15 @@ cron.schedule("0 9 * * *", async () => {
   }
 });
 
+// ── Keep-alive server for Render ──────────────────────
+const http = require("http");
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end("Trust Bot is running!");
+}).listen(process.env.PORT || 3000, () => {
+  console.log(`✅ Health check server running on port ${process.env.PORT || 3000}`);
+});
+
 // ── Launch ─────────────────────────────────────────────
 bot.launch()
   .then(() => console.log("🤖 Trust Bot is running..."))
