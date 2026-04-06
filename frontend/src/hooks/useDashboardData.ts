@@ -15,7 +15,7 @@ export interface Loan {
 export interface Transaction {
   id: string;
   privy_id: string;
-  type: 'borrow' | 'repay';
+  type: 'borrow' | 'repay' | 'transfer';
   amount: number;
   created_at: string;
 }

@@ -11,7 +11,9 @@ import {
 import { ShieldCheck, LockKey, CheckCircle } from "@phosphor-icons/react";
 import WorldIDVerify from "@/components/WorldIDVerify";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useDashboardData } from "@/hooks/useDashboardData"; // Keep for history/transactions
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { useState } from "react";
+import SendFundsModal from "@/components/dashboard/SendFundsModal";
 
 export default function DashboardOverview() {
   const { user } = usePrivy();
@@ -19,6 +21,7 @@ export default function DashboardOverview() {
   const { sbtCount, totalBorrowed, totalRepaid, loanLimit, tierName, balance, loading: statsLoading } = useUserStats();
   const { hasActiveLoan, amount, status, repay, repaying, loading: loanLoading } = useActiveLoan();
   const { transactions, loading: historyLoading } = useDashboardData();
+  const [isSendOpen, setIsSendOpen] = useState(false);
   const searchParams = useSearchParams();
   const query = searchParams.get("q")?.toLowerCase() || "";
 
@@ -35,7 +38,7 @@ export default function DashboardOverview() {
   );
 
   const dynamicHistoryData = filteredTransactions.length > 0 
-    ? filteredTransactions.filter(tx => tx.type === 'repay').map((tx, idx) => ({ date: `Tx ${idx+1}`, amount: tx.amount }))
+    ? filteredTransactions.filter(tx => tx.type === 'repay' || tx.type === 'transfer').map((tx, idx) => ({ date: `Tx ${idx+1}`, amount: tx.amount }))
     : [{ date: 'No Data', amount: 0 }];
 
   if (statsLoading || loanLoading || historyLoading) {
@@ -108,6 +111,7 @@ export default function DashboardOverview() {
         hskBalance={Number(balance)}
         isVerified={isVerified}
         tier={tierName}
+        onSendClick={() => setIsSendOpen(true)}
       />
 
       {/* 3. Analytics Section */}
@@ -134,6 +138,12 @@ export default function DashboardOverview() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      <SendFundsModal 
+        isOpen={isSendOpen} 
+        onClose={() => setIsSendOpen(false)}
+        userBalance={balance}
+      />
     </div>
   );
 }

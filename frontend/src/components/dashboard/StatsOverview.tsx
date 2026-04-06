@@ -16,9 +16,18 @@ interface StatsOverviewProps {
   hskBalance: number;
   isVerified: boolean;
   tier: string;
+  onSendClick?: () => void;
 }
 
-export default function StatsOverview({ totalBorrowed, totalDue, totalSbts, hskBalance, isVerified, tier }: StatsOverviewProps) {
+export default function StatsOverview({ 
+  totalBorrowed, 
+  totalDue, 
+  totalSbts, 
+  hskBalance, 
+  isVerified, 
+  tier,
+  onSendClick 
+}: StatsOverviewProps) {
   const stats: StatItem[] = [
     { 
       label: "Wallet Balance", 
@@ -71,7 +80,20 @@ export default function StatsOverview({ totalBorrowed, totalDue, totalSbts, hskB
             </div>
           </div>
           <p className="text-slate-500 text-xs font-bold tracking-widest uppercase mb-1">{stat.label}</p>
-          <h3 className="text-2xl font-black text-white">{stat.value}</h3>
+          <div className="flex justify-between items-end">
+            <h3 className="text-2xl font-black text-white">{stat.value}</h3>
+            {stat.label === "Wallet Balance" && onSendClick && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSendClick();
+                }}
+                className="px-3 py-1.5 bg-blue-500/10 text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-lg border border-blue-500/20 hover:bg-blue-500/20 transition-all font-sans"
+              >
+                Send
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

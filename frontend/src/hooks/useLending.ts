@@ -219,14 +219,58 @@ export function useLending() {
     }
   };
 
+  const [isSending, setIsSending] = useState(false);
+
+  // --- SEND FUNDS (Standard Wallet Transfer) ---
+  const sendFunds = async (to: string, amountHSK: string) => {
+    const wallet = getWallet();
+    setIsSending(true);
+    setError(null);
+    try {
+      const signer = await getPrivySigner(wallet);
+      
+      // Basic address validation
+      if (!ethers.isAddress(to)) {
+        throw new Error("Invalid recipient address.");
+      }
+
+      console.log(`Sending ${amountHSK} HSK to ${to}...`);
+      
+      const tx = await signer.sendTransaction({
+        to,
+        value: ethers.parseUnits(amountHSK, 18)
+      });
+
+      console.log("Transfer sent! Hash:", tx.hash);
+      await tx.wait();
+
+      // Track as a transfer transaction in database
+      await supabase.from("transactions").insert({
+        privy_id: user!.id,
+        type: "transfer",
+        amount: parseFloat(amountHSK)
+      });
+
+      return true;
+    } catch (err: any) {
+      console.error("Transfer failed:", err);
+      setError(err?.reason || err?.message || "Transfer failed. Check your gas!");
+      return false;
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return {
     borrow,
     repay,
     claimFaucet,
+    sendFunds,
     getStats,
     isBorrowing,
     isRepaying,
     isClaiming,
+    isSending,
     error,
   };
 }
