@@ -98,7 +98,7 @@ export function useUserStats() {
   });
   const [loading, setLoading] = useState(true);
 
-  const TIER_NAMES = ["None", "Bronze", "Silver", "Gold"];
+  const TIER_NAMES = ["Bronze", "Silver", "Gold"];
 
   useEffect(() => {
     if (!address) {

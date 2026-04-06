@@ -40,28 +40,74 @@ const loanManager = new ethers.Contract(
 const loanSBT = new ethers.Contract(LOAN_SBT_ADDRESS, LOAN_SBT_ABI, provider);
 
 // ── Helpers ────────────────────────────────────────────
-const TIER_NAMES = ["None", "Bronze", "Silver", "Gold"];
-const TIER_EMOJI = ["⬜", "🥉", "🥈", "🥇"];
+const TIER_NAMES = ["Bronze", "Silver", "Gold"];
+const TIER_EMOJI = ["🥉", "🥈", "🥇"];
 const STATUS_NAMES = ["None", "Active", "Repaid", "Defaulted"];
 
 async function getWallet(telegramId) {
-  const { data } = await supabase
+  const tId = String(telegramId);
+  console.log(`[DB] Fetching wallet for Telegram ID: ${tId}`);
+  
+  const { data, error } = await supabase
     .from("users")
     .select("wallet_address, display_name")
-    .eq("telegram_id", telegramId.toString())
-    .single();
+    .eq("telegram_id", tId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[DB ERROR] Error fetching wallet:", error.message);
+    return null;
+  }
+  
+  if (data) {
+    console.log(`[DB SUCCESS] Found wallet: ${data.wallet_address}`);
+  } else {
+    console.log(`[DB INFO] No wallet found for ID: ${tId}`);
+  }
+  
   return data;
 }
 
 async function saveWallet(telegramId, walletAddress, username) {
-  await supabase.from("users").upsert(
-    {
-      telegram_id: telegramId.toString(),
-      wallet_address: walletAddress,
-      display_name: username || null,
-    },
-    { onConflict: "telegram_id" }
-  );
+  const tId = String(telegramId);
+  const wallet = walletAddress.toLowerCase();
+  console.log(`[DB] Linking wallet ${wallet} for Telegram ID: ${tId}`);
+  
+  // 1. First, check if this wallet is already in the database (e.g. from dApp use)
+  const { data: existingWallet } = await supabase
+    .from("users")
+    .select("id, telegram_id")
+    .ilike("wallet_address", wallet)
+    .maybeSingle();
+
+  if (existingWallet) {
+    console.log(`[DB INFO] Found existing wallet record (${existingWallet.id}). Syncing Telegram ID...`);
+    // Case A: Wallet exists -> Update it with the telegram_id
+    const { error } = await supabase
+      .from("users")
+      .update({ 
+        telegram_id: tId,
+        display_name: username || null 
+      })
+      .eq("id", existingWallet.id);
+
+    if (error) throw error;
+  } else {
+    // Case B: Completely new user -> Upsert to be safe
+    console.log(`[DB INFO] No existing wallet record found. Creating new user link...`);
+    const { error } = await supabase.from("users").upsert(
+      {
+        telegram_id: tId,
+        wallet_address: walletAddress, // Keep original case for storage
+        display_name: username || null,
+      },
+      { onConflict: "telegram_id" }
+    );
+
+    if (error) throw error;
+  }
+  
+  console.log(`[DB SUCCESS] Wallet identity merged!`);
 }
 
 function formatHSK(wei) {
@@ -127,7 +173,7 @@ bot.command("link", (ctx) => {
   ctx.reply(
     `🔗 *Link Your Wallet*\n\n` +
       `Send your wallet address (starting with 0x) to connect it to your Telegram account.\n\n` +
-      `_Example: 0x6e6f9005aDAA32650AEF2319bFe5c62258E5a413_`,
+      `_Example: 0x1234567890abcdef1234567890abcdef12345678_`,
     { parse_mode: "Markdown" }
   );
 });

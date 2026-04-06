@@ -4,7 +4,7 @@ dotenv.config();
 
 const LOAN_SBT = "0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74";
 const LOAN_MANAGER = "0x1f093A6C32e908e41A8f884581FE7443A403736d";
-const USER = "0x6e6f9005aDAA32650AEF2319bfE5c62258E5a413"; // from your error
+const USER = "0x1234567890abcdef1234567890abcdef12345678"; // Generic placeholder
 
 const provider = new ethers.JsonRpcProvider("https://testnet.hsk.xyz");
 
