@@ -122,8 +122,8 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           </button>
         )}
 
-        {/* Mobile Setup Wallet Button */}
-        {user && !user.wallet && wallets.length === 0 && (
+        {/* Setup Wallet Button */}
+        {user && !user.wallet && (
           <button
             onClick={() => createWallet()}
             className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500 text-[#020617] text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse hover:animate-none"
