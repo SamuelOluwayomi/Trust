@@ -151,11 +151,11 @@ By combining World ID and SBTs, Trust creates a fully trustless credit system. W
 ```
 
 ## Smart Contracts (HashKey Testnet)
-- **Faucet**: [`0xCaB6c9B74b202cc7E2c8A56078Bd87a09dd5038A`](https://testnet-explorer.hsk.xyz/address/0xCaB6c9B74b202cc7E2c8A56078Bd87a09dd5038A)
+- **[Faucet](./contracts/contracts/Faucet.sol)**: [`0xCaB6c9B74b202cc7E2c8A56078Bd87a09dd5038A`](https://testnet-explorer.hsk.xyz/address/0xCaB6c9B74b202cc7E2c8A56078Bd87a09dd5038A)
   - *Function*: Provides testnet HSK to users' newly created Privy embedded wallets so they can pay for gas and the 10% loan collateral. Integrates a strict cooldown mechanism to prevent farming.
-- **LoanSBT**: [`0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74`](https://testnet-explorer.hsk.xyz/address/0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74)
+- **[LoanSBT](./contracts/contracts/LoanSBT.sol)**: [`0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74`](https://testnet-explorer.hsk.xyz/address/0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74)
   - *Function*: An ERC-721 non-transferable token contract. It mints Soul-Bound Tokens to borrowers when they successfully repay their loans, serving as their permanent, immutable on-chain credit history.
-- **LoanManager**: [`0x1f093A6C32e908e41A8f884581FE7443A403736d`](https://testnet-explorer.hsk.xyz/address/0x1f093A6C32e908e41A8f884581FE7443A403736d)
+- **[LoanManager](./contracts/contracts/LoanManager.sol)**: [`0x1f093A6C32e908e41A8f884581FE7443A403736d`](https://testnet-explorer.hsk.xyz/address/0x1f093A6C32e908e41A8f884581FE7443A403736d)
   - *Function*: The core protocol logic. It handles WorldID nullifier verification, locks collateral, disburses loan funds, processes repayments, and natively integrates with LoanSBT to dynamically calculate allowed borrowing tiers based on user reputation.
 
 ## Database Schema
