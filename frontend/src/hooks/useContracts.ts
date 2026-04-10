@@ -303,3 +303,47 @@ export function useApplyForLoan() {
 
   return { apply, loading, error };
 }
+
+// --- USER SBTs ---
+export function useUserSBTs() {
+  const { user } = usePrivy();
+  const address = user?.wallet?.address;
+  const [sbts, setSbts] = useState<{ id: string; tier: string; amount: string; repaidAt: Date }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const TIER_NAMES = ["None", "Bronze", "Silver", "Gold"];
+
+  useEffect(() => {
+    if (!address) {
+      setLoading(false);
+      return;
+    }
+    const fetch = async () => {
+      try {
+        const sbtContract = getLoanSBTContract();
+        const tokenIds = await sbtContract.getUserTokens(address);
+        
+        const sbtData = await Promise.all(
+          tokenIds.map(async (id: bigint) => {
+            const meta = await sbtContract.tokenMetadata(id);
+            return {
+              id: id.toString(),
+              tier: TIER_NAMES[Number(meta.tier)] || "Unknown",
+              amount: ethers.formatEther(meta.loanAmount),
+              repaidAt: new Date(Number(meta.repaidAt) * 1000)
+            };
+          })
+        );
+        
+        setSbts(sbtData);
+      } catch (err) {
+        console.error("SBT fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, [address]);
+
+  return { sbts, loading };
+}

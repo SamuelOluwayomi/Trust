@@ -1,13 +1,11 @@
 "use client";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useUserSBTs } from "@/hooks/useContracts";
 import { Certificate } from "@phosphor-icons/react";
 import { usePrivy } from "@privy-io/react-auth";
 
 export default function SBTPage() {
-  const { loans, loading } = useDashboardData();
+  const { sbts, loading } = useUserSBTs();
   const { user } = usePrivy();
-
-  const repaidLoans = loans.filter(l => l.status === 'Repaid');
 
   if (loading) {
     return (
@@ -30,8 +28,8 @@ export default function SBTPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {repaidLoans.length > 0 ? (
-          repaidLoans.map((loan) => (
+        {sbts.length > 0 ? (
+          sbts.map((loan) => (
             <div key={loan.id} className="bg-[#050914] border border-emerald-500/10 rounded-3xl p-6 flex flex-col items-center text-center space-y-4 relative overflow-hidden group">
                <div className="absolute top-0 inset-x-0 h-1 bg-emerald-500/20 group-hover:bg-emerald-500 transition-colors" />
                <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-2">
@@ -39,7 +37,7 @@ export default function SBTPage() {
                </div>
                <div className="space-y-1">
                   <h3 className="text-white font-bold uppercase tracking-wider text-sm">Credit Score Boost</h3>
-                  <p className="text-[10px] text-slate-500 font-mono">ID: SBT-{loan.id.slice(0, 8).toUpperCase()}</p>
+                  <p className="text-[10px] text-slate-500 font-mono">ID: SBT-{String(loan.id).padStart(8, '0')}</p>
                </div>
                <div className="pt-4 border-t border-white/5 w-full">
                   <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest text-slate-500">
