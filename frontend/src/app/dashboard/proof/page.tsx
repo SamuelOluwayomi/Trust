@@ -1,12 +1,16 @@
 "use client";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useKYC } from "@/hooks/useKYC";
-import { ShieldCheck, LockKey, Fingerprint, Browsers, IdentificationCard, IdentificationBadge } from "@phosphor-icons/react";
+import { ShieldCheck, LockKey, Fingerprint, Browsers, IdentificationCard, IdentificationBadge, ArrowSquareOut } from "@phosphor-icons/react";
 import WorldIDVerify from "@/components/WorldIDVerify";
+import { usePrivy } from "@privy-io/react-auth";
 
 export default function ProofPage() {
+  const { user } = usePrivy();
   const { profile, isVerified, verify } = useUserProfile();
   const { isKycVerified, kycLevelName, kycStatusName, kycCreateTime, requestKyc, requesting } = useKYC();
+  
+  const walletAddress = user?.wallet?.address;
 
   return (
     <div className="space-y-6">
@@ -106,11 +110,21 @@ export default function ProofPage() {
                 </button>
               </div>
             ) : (
-              <div className="max-w-xs pt-4 flex gap-3">
+              <div className="max-w-xs pt-4 flex flex-col gap-3">
                  <div className="w-full py-3 bg-emerald-500/10 text-emerald-400 text-[11px] font-black uppercase tracking-widest rounded-xl border border-emerald-500/20 flex items-center justify-center gap-2">
                   <ShieldCheck className="w-4 h-4" weight="fill" />
                   SBT Secured
                 </div>
+                {walletAddress && (
+                  <a 
+                    href={`https://testnet-explorer.hsk.xyz/address/${walletAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-emerald-400 hover:text-emerald-300 font-bold transition-colors flex items-center justify-center gap-1 w-full mt-1"
+                  >
+                    View on Explorer <ArrowSquareOut className="w-3.5 h-3.5" weight="bold" />
+                  </a>
+                )}
               </div>
             )}
           </div>
