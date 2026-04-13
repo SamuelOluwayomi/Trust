@@ -19,6 +19,8 @@ interface StatsOverviewProps {
   kycVerified?: boolean;
   kycLevel?: string;
   onSendClick?: () => void;
+  onRequestKyc?: () => void;
+  isRequestingKyc?: boolean;
 }
 
 export default function StatsOverview({ 
@@ -30,7 +32,9 @@ export default function StatsOverview({
   tier,
   kycVerified = false,
   kycLevel = "None",
-  onSendClick 
+  onSendClick,
+  onRequestKyc,
+  isRequestingKyc = false
 }: StatsOverviewProps) {
   const stats: StatItem[] = [
     { 
@@ -104,16 +108,18 @@ export default function StatsOverview({
               Send Funds
             </button>
           )}
-          {stat.label === "KYC Status" && !kycVerified && (
-            <a 
-              href="https://kyc-testnet.hunyuankyc.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 w-full py-2 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] flex items-center justify-center gap-2"
+          {stat.label === "KYC Status" && !kycVerified && onRequestKyc && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestKyc();
+              }}
+              disabled={isRequestingKyc}
+              className="mt-2 w-full py-2 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <IdentificationBadge className="w-3.5 h-3.5" weight="fill" />
-              Complete KYC
-            </a>
+              {isRequestingKyc ? "Minting..." : "Complete KYC"}
+            </button>
           )}
         </div>
       ))}

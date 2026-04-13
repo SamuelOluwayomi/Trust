@@ -23,6 +23,7 @@ async function main() {
   const FaucetArtifact = JSON.parse(fs.readFileSync(`${artifactsPath}/Faucet.sol/Faucet.json`, "utf8"));
   const LoanSBTArtifact = JSON.parse(fs.readFileSync(`${artifactsPath}/LoanSBT.sol/LoanSBT.json`, "utf8"));
   const LoanManagerArtifact = JSON.parse(fs.readFileSync(`${artifactsPath}/LoanManager.sol/LoanManager.json`, "utf8"));
+  const MockKycSBTArtifact = JSON.parse(fs.readFileSync(`${artifactsPath}/MockKycSBT.sol/MockKycSBT.json`, "utf8"));
 
   // Use existing deployed Faucet and LoanSBT from previous runs to save gas/time
   const faucetAddress = "0xCaB6c9B74b202cc7E2c8A56078Bd87a09dd5038A";
@@ -31,14 +32,20 @@ async function main() {
   console.log("\n📦 Reusing existing Faucet at:", faucetAddress);
   console.log("📦 Reusing existing LoanSBT at:", loanSBTAddress);
 
-  // 1. Deploy LoanManager (requires 2 args now: sbtContract, kycContract)
+  // 1. Deploy MockKycSBT
+  console.log("\n📦 Deploying MockKycSBT for Hackathon Demo...");
+  const MockKycFactory = new ethers.ContractFactory(MockKycSBTArtifact.abi, MockKycSBTArtifact.bytecode, deployer);
+  const mockKyc = await MockKycFactory.deploy();
+  await mockKyc.waitForDeployment();
+  const mockKycAddress = await mockKyc.getAddress();
+  console.log("✅ MockKycSBT deployed to:", mockKycAddress);
 
+  // 2. Deploy LoanManager (requires 2 args now: sbtContract, kycContract)
   console.log("\n📦 Deploying LoanManager...");
   const LoanManagerFactory = new ethers.ContractFactory(LoanManagerArtifact.abi, LoanManagerArtifact.bytecode, deployer);
   
-  // By default, pass ethers.ZeroAddress for the KYC SBT to bypass checks. 
-  // You can set a real HashKey KYC SBT address later via loanManager.setKycSBT()
-  const loanManager = await LoanManagerFactory.deploy(loanSBTAddress, ethers.ZeroAddress);
+  // Pass the newly deployed MockKycSBT address to strictly enforce KYC rules!
+  const loanManager = await LoanManagerFactory.deploy(loanSBTAddress, mockKycAddress);
   await loanManager.waitForDeployment();
   const loanManagerAddress = await loanManager.getAddress();
   console.log("✅ LoanManager deployed to:", loanManagerAddress);
@@ -50,11 +57,11 @@ async function main() {
   await tx.wait();
   console.log("✅ LoanSBT linked to LoanManager");
 
-  // 3. Summary
   console.log("\n=== DEPLOYMENT SUMMARY ===");
   console.log(`NEXT_PUBLIC_FAUCET_ADDRESS=${faucetAddress}`);
   console.log(`NEXT_PUBLIC_LOAN_SBT_ADDRESS=${loanSBTAddress}`);
   console.log(`NEXT_PUBLIC_LOAN_MANAGER_ADDRESS=${loanManagerAddress}`);
+  console.log(`NEXT_PUBLIC_KYC_SBT_ADDRESS=${mockKycAddress}`);
 }
 
 main().catch((error) => {

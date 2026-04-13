@@ -9,6 +9,7 @@ import {
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { supabase } from "@/lib/supabase";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useKYC } from "@/hooks/useKYC";
 import WorldIDVerify from "@/components/WorldIDVerify";
 
 const ONBOARDING_KEY = "trust_onboarding_completed";
@@ -53,6 +54,8 @@ export default function OnboardingModal() {
   const [currentStep, setCurrentStep] = useState(0);
   const [verified, setVerified] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const { requestKyc, requesting: kycRequesting } = useKYC();
 
   const { user } = usePrivy();
   const { wallets } = useWallets();
@@ -226,15 +229,17 @@ export default function OnboardingModal() {
                     </p>
 
                     <div className="space-y-3">
-                      <a
-                        href="https://kyc-testnet.hunyuankyc.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/40 text-sm font-semibold transition-all"
+                      <button
+                        onClick={async () => {
+                          const success = await requestKyc("trust_onboarding");
+                          if (success) nextStep();
+                        }}
+                        disabled={kycRequesting}
+                        className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/40 text-sm font-semibold transition-all disabled:opacity-50"
                       >
                         <IdentificationBadge className="w-5 h-5" weight="fill" />
-                        Complete KYC on HashKey Portal
-                      </a>
+                        {kycRequesting ? "Minting KYC Profile..." : "Mint KYC On-Chain"}
+                      </button>
                       <button
                         onClick={nextStep}
                         className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors py-2"

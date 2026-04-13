@@ -11,6 +11,7 @@ import {
 import { ShieldCheck, LockKey, CheckCircle } from "@phosphor-icons/react";
 import WorldIDVerify from "@/components/WorldIDVerify";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useKYC } from "@/hooks/useKYC";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useState } from "react";
 import SendFundsModal from "@/components/dashboard/SendFundsModal";
@@ -20,6 +21,7 @@ export default function DashboardOverview() {
   const { isVerified, verify } = useUserProfile();
   const { sbtCount, totalBorrowed, totalRepaid, loanLimit, tierName, balance, kycVerified, kycLevel, loading: statsLoading } = useUserStats();
   const { hasActiveLoan, amount, status, repay, repaying, loading: loanLoading } = useActiveLoan();
+  const { requestKyc, requesting: kycRequesting } = useKYC();
   const { transactions, loading: historyLoading } = useDashboardData();
   const [isSendOpen, setIsSendOpen] = useState(false);
   const searchParams = useSearchParams();
@@ -114,6 +116,8 @@ export default function DashboardOverview() {
         kycVerified={kycVerified}
         kycLevel={kycLevel === 1 ? "Basic" : kycLevel === 2 ? "Advanced" : kycLevel === 3 ? "Premium" : kycLevel === 4 ? "Ultimate" : "None"}
         onSendClick={() => setIsSendOpen(true)}
+        onRequestKyc={() => requestKyc("trust_user")}
+        isRequestingKyc={kycRequesting}
       />
 
       {/* 3. Analytics Section */}
