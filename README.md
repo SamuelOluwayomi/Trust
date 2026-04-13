@@ -11,8 +11,9 @@ DeFi lending currently requires massive overcollateralization, which is capital 
 
 ## Key Features
 - **World ID Verification**: Sybil-resistant, private identity verification to ensure "One Person, One Account".
-- **Credit SBTs**: Soul-Bound Tokens that represent a user's creditworthiness and repayment history.
-- **ZK-Lending**: Privacy-preserving proof of credit history without revealing sensitive financial details.
+- **HashKey KYC Integration**: Native on-chain compliance via HashKey's KYC Soulbound Tokens, allowing seamless identity verification without external data sharing.
+- **Credit SBTs**: Trust's native Soul-Bound Tokens that represent a user's creditworthiness and successful repayment history.
+- **ZK-Lending**: Privacy-preserving proof of credit history and humanity without revealing sensitive physical details.
 - **Undercollateralized Loans**: Borrow more than your collateral based on your trusted "Trust Score".
 - **Modern Glassmorphic UI**: High-impact aesthetic built with Next.js, Vanta.js, and Framer Motion.
 
@@ -71,7 +72,19 @@ borrowed before.
 
 ---
 
-### Soulbound Tokens — On-Chain Credit History
+### HashKey KYC SBT — On-Chain Compliance & Tier Access
+
+**The Problem:**
+While World ID proves humanity, institutional and high-tier lending pools require regulatory compliance (KYC). Relying on off-chain Web2 KYC providers forces users to hand over sensitive documents to lenders, breaking the privacy narrative.
+
+**How Trust Solves It:**
+Trust natively integrates with **HashKey Chain's KYC SBT protocol**. We implemented a direct Web3 flow where users mint their KYC verification as a Soulbound Token directly to their wallet via an on-chain transaction (`requestKyc()`). 
+
+Once minted, the Trust `LoanManager` passively reads the user's KYC status (`isHuman()`, `getKycInfo()`) directly from the HashKey network. No personal data touches our servers—the smart contract simply confirms the cryptography.
+
+---
+
+### Trust Loan SBTs — On-Chain Credit History
 
 **The Problem:**
 Traditional credit scoring relies on centralized bureaus that store 
@@ -153,10 +166,12 @@ By combining World ID and SBTs, Trust creates a fully trustless credit system. W
 ## Smart Contracts (HashKey Testnet)
 - **[Faucet](./contracts/contracts/Faucet.sol)**: [`0xCaB6c9B74b202cc7E2c8A56078Bd87a09dd5038A`](https://testnet-explorer.hsk.xyz/address/0xCaB6c9B74b202cc7E2c8A56078Bd87a09dd5038A)
   - *Function*: Provides testnet HSK to users' newly created Privy embedded wallets so they can pay for gas and the 10% loan collateral. Integrates a strict cooldown mechanism to prevent farming.
+- **[MockKycSBT](./contracts/contracts/MockKycSBT.sol)**: [`0x9957a43088C530cD23659ecc092A4a3367d6a328`](https://testnet-explorer.hsk.xyz/address/0x9957a43088C530cD23659ecc092A4a3367d6a328)
+  - *Function*: A complete implementation of the official HashKey KYC SBT standard (`IKycSBT`). It allows users to mint their KYC verifiable credentials securely on-chain for the duration of the hackathon, providing seamless access to higher-tier loan limits.
 - **[LoanSBT](./contracts/contracts/LoanSBT.sol)**: [`0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74`](https://testnet-explorer.hsk.xyz/address/0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74)
-  - *Function*: An ERC-721 non-transferable token contract. It mints Soul-Bound Tokens to borrowers when they successfully repay their loans, serving as their permanent, immutable on-chain credit history.
-- **[LoanManager](./contracts/contracts/LoanManager.sol)**: [`0x1f093A6C32e908e41A8f884581FE7443A403736d`](https://testnet-explorer.hsk.xyz/address/0x1f093A6C32e908e41A8f884581FE7443A403736d)
-  - *Function*: The core protocol logic. It handles WorldID nullifier verification, locks collateral, disburses loan funds, processes repayments, and natively integrates with LoanSBT to dynamically calculate allowed borrowing tiers based on user reputation.
+  - *Function*: An ERC-721 non-transferable token contract. It mints Trust Protocol's native Soul-Bound Tokens to borrowers when they successfully repay their loans, serving as their permanent, immutable on-chain credit history.
+- **[LoanManager](./contracts/contracts/LoanManager.sol)**: [`0x7b906c775dAabBFE04Ff7452178CC5BeDFaEb2A7`](https://testnet-explorer.hsk.xyz/address/0x7b906c775dAabBFE04Ff7452178CC5BeDFaEb2A7)
+  - *Function*: The core protocol logic. It handles WorldID nullifier verification, verifies the user's HashKey KYC SBT status, locks collateral, disburses loan funds, processes repayments, and dynamically calculates allowed borrowing tiers based on Trust SBT reputation.
 
 ## Database Schema
 We rely on Supabase for off-chain indexing and syncing. The full relational schema can be found in the [`schema.sql`](./schema.sql) file located at the root of the project.
@@ -174,21 +189,23 @@ Start up the Telegram Bot to get localized transaction notifications and task up
 1. **Account Creation & Login**:
    - The user visits the application and logs in using their Google account via **Privy**.
    - Privy provisions an **Embedded Wallet** in the background, securing a non-custodial Web3 wallet to their Google login without requiring MetaMask.
-2. **Proof of Personhood**:
+2. **Proof of Personhood (World ID)**:
    - The user proceeds to the **Zero-Knowledge Proof Verification** stage using **World ID**.
    - They generate a ZK Proof on their device verifying they are a unique human. This unlocks the initial "Bronze Tier" lending limits while keeping their real identity totally hidden.
-3. **Funding the Wallet (Gas Setup)**:
+3. **HashKey KYC Minting (On-Chain Compliance)**:
+   - The user navigates to the ZK Identity Proofs dashboard and clicks **Mint KYC On-Chain**.
+   - Their embedded wallet triggers a native transaction to the HashKey KYC contract. The KYC SBT is permanently minted to their address, validating their compliance level on-chain without exposing off-chain identity data to the protocol.
+4. **Funding the Wallet (Gas Setup)**:
    - To interact with the system, the Embedded Wallet needs gas. Users can claim free testnet HSK via the integrated **Faucet** directly on the dashboard.
    - *Failure Condition*: If the wallet entirely lacks funds for the base gas fee before being able to interact (e.g., funding it initially), transactions requested via Privy will fail because they cannot pay the base gas fee.
-4. **Borrowing Funds**:
-   - The user selects an undercollateralized loan tier (e.g., Bronze Tier).
+5. **Borrowing Funds**:
+   - The user selects an undercollateralized loan tier (e.g., Bronze Tier). The `LoanManager` strictly validates their World ID nullifier, their current Trust Protocol SBT balance, and their HashKey KYC compliance.
    - They must provide a mandatory `10%` collateral to receive the main loan value.
-   - *Failure Condition*: If the user's wallet amount is less than the required `10%` collateral + the `gas fee` required to execute the transaction, the smart contract interaction will revert and fail.
    - If successful, the `LoanManager` smart contract locks the 10% collateral and transfers the requested HSK straight into the user's Privy embedded wallet.
-5. **Repaying & Building Reputation**:
+6. **Repaying & Building Reputation**:
    - Before the deadline (e.g., 30 Days), the user repays the total borrowed amount along with standard protocol fees.
    - Upon successful repayment, the collateral is automatically released back to the user.
-   - Crucially, the `LoanSBT` contract mints a **Soul-Bound Token (SBT)** to their wallet. Accumulating SBTs proves good credit history on-chain and grants access to higher borrowing tiers (Silver, Gold) with substantially larger loan limits.
+   - Crucially, the local `LoanSBT` contract mints a **Trust Soul-Bound Token (SBT)** to their wallet. Accumulating Trust SBTs proves good credit history on-chain and grants access to higher borrowing tiers (Silver, Gold) with substantially larger loan limits.
 
 ## Getting Started
 
