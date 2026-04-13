@@ -2,9 +2,11 @@
 pragma solidity ^0.8.28;
 
 import "./LoanSBT.sol";
+import "./IKycSBT.sol";
 
 contract LoanManager is Ownable {
     LoanSBT public sbtContract;
+    IKycSBT public kycSBT;  // HashKey Chain KYC SBT — set to address(0) to disable KYC checks
 
     // Tier limits in HSK (wei)
     uint256 public constant BRONZE_LIMIT = 0.02 ether;
@@ -38,8 +40,9 @@ contract LoanManager is Ownable {
     event LoanRepaid(address indexed borrower, uint256 amount, uint256 tokenId);
     event LoanDefaulted(address indexed borrower, uint256 amount);
 
-    constructor(address _sbtContract) Ownable(msg.sender) {
+    constructor(address _sbtContract, address _kycSBT) Ownable(msg.sender) {
         sbtContract = LoanSBT(_sbtContract);
+        kycSBT = IKycSBT(_kycSBT);
     }
 
     modifier notBlacklisted() {
@@ -52,6 +55,14 @@ contract LoanManager is Ownable {
             activeLoans[msg.sender].status != LoanStatus.Active,
             "Already have active loan"
         );
+        _;
+    }
+
+    modifier requireKYC() {
+        if (address(kycSBT) != address(0)) {
+            (bool isValid, ) = kycSBT.isHuman(msg.sender);
+            require(isValid, "HashKey KYC verification required");
+        }
         _;
     }
 
@@ -71,7 +82,7 @@ contract LoanManager is Ownable {
     function applyForLoan(
         uint256 amount,
         bytes32 nullifier  // from World ID / ZK proof
-    ) external payable notBlacklisted noActiveLoan {
+    ) external payable notBlacklisted noActiveLoan requireKYC {
         // Check nullifier hasn't been used
         require(!usedNullifiers[nullifier], "Identity already used for loan");
 
@@ -158,6 +169,19 @@ contract LoanManager is Ownable {
         if (loan.status != LoanStatus.Active) return 0;
         if (block.timestamp >= loan.dueDate) return 0;
         return (loan.dueDate - block.timestamp) / 1 days;
+    }
+
+    // --- KYC Management ---
+
+    /// @notice Update the KYC SBT contract reference. Set to address(0) to disable KYC checks.
+    function setKycSBT(address _kycSBT) external onlyOwner {
+        kycSBT = IKycSBT(_kycSBT);
+    }
+
+    /// @notice Check a user's KYC status via the HashKey KYC SBT
+    function getUserKycInfo(address user) external view returns (bool isVerified, uint8 level) {
+        if (address(kycSBT) == address(0)) return (false, 0);
+        return kycSBT.isHuman(user);
     }
 
     // Fund the loan pool

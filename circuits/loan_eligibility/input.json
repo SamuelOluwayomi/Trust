@@ -1,0 +1,8 @@
+{
+    "sbtCount": "2",
+    "totalRepaid": "50000000000000000",
+    "salt": "987654321",
+    "requestedAmount": "50000000000000000",
+    "maxLoanAmount": "100000000000000000",
+    "minSbtRequired": "1"
+}

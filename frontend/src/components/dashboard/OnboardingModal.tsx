@@ -192,10 +192,10 @@ export default function OnboardingModal() {
                       <>
                         <WorldIDVerify onVerified={handleVerified} />
                         <button
-                          onClick={handleClose}
+                          onClick={nextStep}
                           className="mt-4 w-full text-xs text-slate-500 hover:text-slate-300 transition-colors py-2"
                         >
-                          Skip for now — verify later in Settings
+                          Skip for now — continue to KYC
                         </button>
                       </>
                     ) : (
@@ -214,8 +214,8 @@ export default function OnboardingModal() {
                     animate={{ opacity: 1, y: 0 }}
                     className="w-full"
                   >
-                    <div className="w-20 h-20 rounded-3xl bg-violet-500/10 flex items-center justify-center mb-8 mx-auto">
-                      <IdentificationBadge className="w-10 h-10 text-violet-400" weight="duotone" />
+                    <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center mb-8 mx-auto">
+                      <IdentificationBadge className="w-10 h-10 text-emerald-400" weight="duotone" />
                     </div>
 
                     <h2 className="text-2xl font-black text-white tracking-tight mb-3 uppercase">
@@ -230,7 +230,7 @@ export default function OnboardingModal() {
                         href="https://kyc-testnet.hunyuankyc.com/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-violet-500/20 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:border-violet-500/40 text-sm font-semibold transition-all"
+                        className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/40 text-sm font-semibold transition-all"
                       >
                         <IdentificationBadge className="w-5 h-5" weight="fill" />
                         Complete KYC on HashKey Portal
@@ -275,18 +275,23 @@ export default function OnboardingModal() {
                   </button>
                 )}
 
-                {(isVerifyStep || isKycStep) ? (
-                  // On verify/KYC step: show "Start Borrowing" after verified or on KYC step
-                  (verified || isKycStep) && (
-                    <button
-                      onClick={handleClose}
-                      disabled={saving}
-                      className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-[#0a0f1e] text-[11px] font-black px-6 py-3 rounded-xl transition-all duration-300 shadow-lg shadow-emerald-500/20 active:scale-95 uppercase tracking-widest"
-                    >
-                      {saving ? "Saving..." : "Start Borrowing"}
-                      <CaretRight className="w-4 h-4" weight="bold" />
-                    </button>
-                  )
+                {isKycStep ? (
+                  <button
+                    onClick={handleClose}
+                    className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-[#0a0f1e] text-[11px] font-black px-6 py-3 rounded-xl transition-all duration-300 shadow-lg shadow-emerald-500/20 active:scale-95 uppercase tracking-widest"
+                  >
+                    Start Borrowing
+                    <CaretRight className="w-4 h-4" weight="bold" />
+                  </button>
+                ) : isVerifyStep ? (
+                  <button
+                    onClick={nextStep}
+                    disabled={saving}
+                    className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-[#0a0f1e] text-[11px] font-black px-6 py-3 rounded-xl transition-all duration-300 shadow-lg shadow-emerald-500/20 active:scale-95 uppercase tracking-widest"
+                  >
+                    {saving ? "Saving..." : verified ? "Next Step" : "Skip Identity"}
+                    <CaretRight className="w-4 h-4" weight="bold" />
+                  </button>
                 ) : (
                   <button
                     onClick={nextStep}

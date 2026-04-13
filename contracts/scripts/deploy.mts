@@ -24,38 +24,33 @@ async function main() {
   const LoanSBTArtifact = JSON.parse(fs.readFileSync(`${artifactsPath}/LoanSBT.sol/LoanSBT.json`, "utf8"));
   const LoanManagerArtifact = JSON.parse(fs.readFileSync(`${artifactsPath}/LoanManager.sol/LoanManager.json`, "utf8"));
 
-  // 1. Deploy Faucet
-  console.log("\n📦 Deploying Faucet...");
-  const FaucetFactory = new ethers.ContractFactory(FaucetArtifact.abi, FaucetArtifact.bytecode, deployer);
-  const faucet = await FaucetFactory.deploy();
-  await faucet.waitForDeployment();
-  const faucetAddress = await faucet.getAddress();
-  console.log("✅ Faucet deployed to:", faucetAddress);
+  // Use existing deployed Faucet and LoanSBT from previous runs to save gas/time
+  const faucetAddress = "0xCaB6c9B74b202cc7E2c8A56078Bd87a09dd5038A";
+  const loanSBTAddress = "0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74";
 
-  // 2. Deploy LoanSBT
-  console.log("\n📦 Deploying LoanSBT...");
-  const LoanSBTFactory = new ethers.ContractFactory(LoanSBTArtifact.abi, LoanSBTArtifact.bytecode, deployer);
-  const loanSBT = await LoanSBTFactory.deploy();
-  await loanSBT.waitForDeployment();
-  const loanSBTAddress = await loanSBT.getAddress();
-  console.log("✅ LoanSBT deployed to:", loanSBTAddress);
+  console.log("\n📦 Reusing existing Faucet at:", faucetAddress);
+  console.log("📦 Reusing existing LoanSBT at:", loanSBTAddress);
 
-  // 3. Deploy LoanManager
+  // 1. Deploy LoanManager (requires 2 args now: sbtContract, kycContract)
+
   console.log("\n📦 Deploying LoanManager...");
   const LoanManagerFactory = new ethers.ContractFactory(LoanManagerArtifact.abi, LoanManagerArtifact.bytecode, deployer);
-  const loanManager = await LoanManagerFactory.deploy(loanSBTAddress);
+  
+  // By default, pass ethers.ZeroAddress for the KYC SBT to bypass checks. 
+  // You can set a real HashKey KYC SBT address later via loanManager.setKycSBT()
+  const loanManager = await LoanManagerFactory.deploy(loanSBTAddress, ethers.ZeroAddress);
   await loanManager.waitForDeployment();
   const loanManagerAddress = await loanManager.getAddress();
   console.log("✅ LoanManager deployed to:", loanManagerAddress);
 
-  // 4. Link LoanSBT → LoanManager
-  console.log("\n🔗 Linking LoanSBT to LoanManager...");
+  // 2. Link LoanSBT → LoanManager
+  console.log("\n🔗 Linking LoanSBT to new LoanManager...");
   const loanSBTContract = new ethers.Contract(loanSBTAddress, LoanSBTArtifact.abi, deployer);
   const tx = await loanSBTContract.setLoanManager(loanManagerAddress);
   await tx.wait();
   console.log("✅ LoanSBT linked to LoanManager");
 
-  // 5. Summary
+  // 3. Summary
   console.log("\n=== DEPLOYMENT SUMMARY ===");
   console.log(`NEXT_PUBLIC_FAUCET_ADDRESS=${faucetAddress}`);
   console.log(`NEXT_PUBLIC_LOAN_SBT_ADDRESS=${loanSBTAddress}`);
