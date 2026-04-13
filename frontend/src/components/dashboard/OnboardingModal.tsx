@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ShieldCheck, HandCoins, Target, RocketLaunch, 
-  X, CaretRight, CaretLeft, CheckCircle,
+  X, CaretRight, CaretLeft, CheckCircle, IdentificationBadge,
 } from "@phosphor-icons/react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { supabase } from "@/lib/supabase";
@@ -44,8 +44,9 @@ const steps = [
   },
 ];
 
-const VERIFY_STEP = steps.length;     // step index 4
-const TOTAL_STEPS = steps.length + 1; // 5 total
+const VERIFY_STEP = steps.length;       // step index 4 — World ID
+const KYC_STEP = steps.length + 1;      // step index 5 — HashKey KYC
+const TOTAL_STEPS = steps.length + 2;   // 6 total
 
 export default function OnboardingModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -96,7 +97,8 @@ export default function OnboardingModal() {
   if (!isOpen) return null;
 
   const isVerifyStep = currentStep === VERIFY_STEP;
-  const step = !isVerifyStep ? steps[currentStep] : null;
+  const isKycStep = currentStep === KYC_STEP;
+  const step = (!isVerifyStep && !isKycStep) ? steps[currentStep] : null;
 
   return (
     <AnimatePresence>
@@ -205,6 +207,44 @@ export default function OnboardingModal() {
                   </motion.div>
                 )}
 
+                {/* KYC STEP */}
+                {isKycStep && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full"
+                  >
+                    <div className="w-20 h-20 rounded-3xl bg-violet-500/10 flex items-center justify-center mb-8 mx-auto">
+                      <IdentificationBadge className="w-10 h-10 text-violet-400" weight="duotone" />
+                    </div>
+
+                    <h2 className="text-2xl font-black text-white tracking-tight mb-3 uppercase">
+                      HashKey KYC
+                    </h2>
+                    <p className="text-slate-400 text-sm leading-relaxed max-w-xs mx-auto mb-6">
+                      Complete HashKey Chain&apos;s on-chain KYC to receive a Soul Bound Token (SBT) that proves your identity verification level.
+                    </p>
+
+                    <div className="space-y-3">
+                      <a
+                        href="https://kyc-testnet.hunyuankyc.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-violet-500/20 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:border-violet-500/40 text-sm font-semibold transition-all"
+                      >
+                        <IdentificationBadge className="w-5 h-5" weight="fill" />
+                        Complete KYC on HashKey Portal
+                      </a>
+                      <button
+                        onClick={nextStep}
+                        className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors py-2"
+                      >
+                        Skip for now — KYC is optional for Bronze tier
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
               </div>
             </div>
 
@@ -235,9 +275,9 @@ export default function OnboardingModal() {
                   </button>
                 )}
 
-                {isVerifyStep ? (
-                  // On verify step: only show "Start Borrowing" after verified
-                  verified && (
+                {(isVerifyStep || isKycStep) ? (
+                  // On verify/KYC step: show "Start Borrowing" after verified or on KYC step
+                  (verified || isKycStep) && (
                     <button
                       onClick={handleClose}
                       disabled={saving}

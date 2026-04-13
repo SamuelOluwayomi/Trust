@@ -1,5 +1,5 @@
 "use client";
-import { HandCoins, Wallet, Certificate, ShieldCheck, ArrowUpRight, ArrowDownRight, PaperPlaneTilt } from "@phosphor-icons/react";
+import { HandCoins, Wallet, Certificate, ShieldCheck, ArrowUpRight, ArrowDownRight, PaperPlaneTilt, IdentificationBadge } from "@phosphor-icons/react";
 
 interface StatItem {
   label: string;
@@ -16,6 +16,8 @@ interface StatsOverviewProps {
   hskBalance: number;
   isVerified: boolean;
   tier: string;
+  kycVerified?: boolean;
+  kycLevel?: string;
   onSendClick?: () => void;
 }
 
@@ -26,6 +28,8 @@ export default function StatsOverview({
   hskBalance, 
   isVerified, 
   tier,
+  kycVerified = false,
+  kycLevel = "None",
   onSendClick 
 }: StatsOverviewProps) {
   const stats: StatItem[] = [
@@ -63,6 +67,13 @@ export default function StatsOverview({
       change: isVerified ? "Verified" : "Unverified", 
       positive: isVerified, 
       icon: ShieldCheck 
+    },
+    { 
+      label: "KYC Status", 
+      value: kycVerified ? "Verified" : "Pending", 
+      change: kycVerified ? kycLevel : "Not KYC'd", 
+      positive: kycVerified, 
+      icon: IdentificationBadge 
     },
   ];
 

@@ -18,7 +18,7 @@ import SendFundsModal from "@/components/dashboard/SendFundsModal";
 export default function DashboardOverview() {
   const { user } = usePrivy();
   const { isVerified, verify } = useUserProfile();
-  const { sbtCount, totalBorrowed, totalRepaid, loanLimit, tierName, balance, loading: statsLoading } = useUserStats();
+  const { sbtCount, totalBorrowed, totalRepaid, loanLimit, tierName, balance, kycVerified, kycLevel, loading: statsLoading } = useUserStats();
   const { hasActiveLoan, amount, status, repay, repaying, loading: loanLoading } = useActiveLoan();
   const { transactions, loading: historyLoading } = useDashboardData();
   const [isSendOpen, setIsSendOpen] = useState(false);
@@ -111,6 +111,8 @@ export default function DashboardOverview() {
         hskBalance={Number(balance)}
         isVerified={isVerified}
         tier={tierName}
+        kycVerified={kycVerified}
+        kycLevel={kycLevel === 1 ? "Basic" : kycLevel === 2 ? "Advanced" : kycLevel === 3 ? "Premium" : kycLevel === 4 ? "Ultimate" : "None"}
         onSendClick={() => setIsSendOpen(true)}
       />
 

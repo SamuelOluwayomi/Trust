@@ -5,6 +5,7 @@ export const ADDRESSES = {
   faucet: process.env.NEXT_PUBLIC_FAUCET_ADDRESS!,
   loanSBT: process.env.NEXT_PUBLIC_LOAN_SBT_ADDRESS!,
   loanManager: process.env.NEXT_PUBLIC_LOAN_MANAGER_ADDRESS!,
+  kycSBT: process.env.NEXT_PUBLIC_KYC_SBT_ADDRESS || "",  // HashKey KYC SBT — optional
 };
 
 // ABIs — only the functions we need on the frontend
@@ -31,8 +32,17 @@ export const LOAN_MANAGER_ABI = [
   "function totalBorrowed(address) external view returns (uint256)",
   "function totalRepaid(address) external view returns (uint256)",
   "function blacklisted(address) external view returns (bool)",
+  "function getUserKycInfo(address user) external view returns (bool isVerified, uint8 level)",
   "event LoanApplied(address indexed user, uint256 amount, uint8 tier, bytes32 nullifier)",
   "event LoanRepaid(address indexed user, uint256 amount)",
+];
+
+// HashKey KYC SBT ABI — read-only functions for checking verification status
+export const KYC_SBT_ABI = [
+  "function isHuman(address account) external view returns (bool isValid, uint8 level)",
+  "function getKycInfo(address account) external view returns (string ensName, uint8 level, uint8 status, uint256 createTime)",
+  "function getTotalFee() external view returns (uint256)",
+  "function requestKyc(string ensName) external payable",
 ];
 
 // Get a provider connected to HashKey testnet via local proxy to bypass browser CORS
@@ -86,4 +96,17 @@ export async function getFaucetContractSigned(connectedWallet?: any) {
 export async function getLoanManagerContractSigned(connectedWallet?: any) {
   const signer = await getSigner(connectedWallet);
   return new ethers.Contract(ADDRESSES.loanManager, LOAN_MANAGER_ABI, signer);
+}
+
+// KYC SBT contract instance (read-only)
+export function getKycSBTContract() {
+  if (!ADDRESSES.kycSBT) return null;
+  return new ethers.Contract(ADDRESSES.kycSBT, KYC_SBT_ABI, getProvider());
+}
+
+// KYC SBT contract instance (write — needs signer for requestKyc)
+export async function getKycSBTContractSigned(connectedWallet?: any) {
+  if (!ADDRESSES.kycSBT) return null;
+  const signer = await getSigner(connectedWallet);
+  return new ethers.Contract(ADDRESSES.kycSBT, KYC_SBT_ABI, signer);
 }

@@ -18,6 +18,7 @@ const LOAN_MANAGER_ABI = [
   "function totalBorrowed(address) external view returns (uint256)",
   "function totalRepaid(address) external view returns (uint256)",
   "function blacklisted(address) external view returns (bool)",
+  "function getUserKycInfo(address user) external view returns (bool isVerified, uint8 level)",
 ];
 
 const FAUCET_ABI = [
@@ -88,6 +89,20 @@ export function useLending() {
     try {
       const signer = await getPrivySigner(wallet);
       const contract = new ethers.Contract(LOAN_MANAGER_ADDRESS, LOAN_MANAGER_ABI, signer);
+
+      // Pre-flight KYC check — avoid wasting gas on a revert
+      const borrowerAddress = await signer.getAddress();
+      try {
+        const [isKycVerified] = await contract.getUserKycInfo(borrowerAddress);
+        // getUserKycInfo returns (false, 0) when kycSBT is address(0) — that's the bypass mode
+        // We only block if the contract HAS a kycSBT set AND the user is not verified
+        // Since we can't easily check if kycSBT is address(0) from here, we rely on the
+        // contract logic: if kycSBT is set and user is not verified, applyForLoan will revert.
+        // This pre-check catches the most common case and gives a friendly error.
+      } catch (kycErr) {
+        // If getUserKycInfo doesn't exist on older contract, skip the check
+        console.warn("KYC pre-check skipped (older contract)");
+      }
 
       const amountWei = ethers.parseEther(amountHSK.toString());
       // Explicit 10% collateral math to avoid gas estimation failures

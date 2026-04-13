@@ -10,6 +10,7 @@ import {
   getLoanSBTContract,
   getLoanManagerContract,
   getLoanManagerContractSigned,
+  getKycSBTContract,
   getProvider,
 } from "@/lib/contracts";
 
@@ -95,6 +96,8 @@ export function useUserStats() {
     loanLimit: "0",
     balance: "0", 
     blacklisted: false,
+    kycVerified: false,
+    kycLevel: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -109,9 +112,10 @@ export function useUserStats() {
       try {
         const sbtContract = getLoanSBTContract();
         const loanContract = getLoanManagerContract();
+        const kycContract = getKycSBTContract();
         const provider = getProvider();
 
-        const [sbtCount, tier, totalBorrowed, totalRepaid, loanLimit, blacklisted, balance] =
+        const [sbtCount, tier, totalBorrowed, totalRepaid, loanLimit, blacklisted, balance, kycResult] =
           await Promise.all([
             sbtContract.getUserSBTCount(address).catch(() => 0n),
             loanContract.getUserTier(address).catch(() => 0n),
@@ -120,7 +124,10 @@ export function useUserStats() {
             loanContract.getLoanLimit(address).catch(() => 0n),
             loanContract.blacklisted(address).catch(() => false),
             provider.getBalance(address).catch(() => 0n),
+            kycContract ? kycContract.isHuman(address).catch(() => [false, 0]) : Promise.resolve([false, 0]),
           ]);
+
+        const [kycVerified, kycLevel] = kycResult;
 
         setStats({
           sbtCount: Number(sbtCount),
@@ -130,8 +137,10 @@ export function useUserStats() {
           loanLimit: ethers.formatEther(loanLimit),
           balance: ethers.formatEther(balance),
           blacklisted,
+          kycVerified: Boolean(kycVerified),
+          kycLevel: Number(kycLevel),
         });
-        console.log(`[DEBUG] On-Chain Tier Index: ${Number(tier)}, SBTs: ${Number(sbtCount)}`);
+        console.log(`[DEBUG] On-Chain Tier Index: ${Number(tier)}, SBTs: ${Number(sbtCount)}, KYC: ${kycVerified}`);
       } catch (err) {
         console.error("Stats sync failed:", err);
       } finally {
