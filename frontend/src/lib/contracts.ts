@@ -24,6 +24,7 @@ export const LOAN_SBT_ABI = [
 
 export const LOAN_MANAGER_ABI = [
   "function applyForLoan(uint256 amount, bytes32 nullifier) external payable",
+  "function applyForLoanWithZK(uint256 amount, uint256[2] calldata _pA, uint256[2][2] calldata _pB, uint256[2] calldata _pC, uint256[5] calldata _pubSignals) external payable",
   "function repayLoan() external payable",
   "function getActiveLoan(address user) external view returns (tuple(uint256 amount, uint256 collateral, uint256 startTime, uint256 dueDate, uint8 tier, uint8 status))",
   "function getUserTier(address user) external view returns (uint8)",

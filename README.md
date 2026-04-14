@@ -147,6 +147,25 @@ By combining World ID and SBTs, Trust creates a fully trustless credit system. W
 
 ---
 
+### Custom ZK Circuits — Hybrid Integration System
+
+**The Problem:**
+While smart contracts natively execute logic transparently, checking someone's credit history directly on-chain exposes their entire financial risk profile to the public. If the contract calculates the score, everyone can see it. 
+
+**How Trust Solves It: The Hybrid ZK Architecture**
+Trust uses custom Zero-Knowledge circuits (`credit_score.circom` and `loan_eligibility.circom`) to calculate eligibility **client-side** in the browser. We employ a **Hybrid Integration Architecture** to prevent breaking changes while utilizing the privacy-preserving features of ZK cryptography:
+
+#### 1. The Old Way (Transparent Execution, Optional Fallback)
+If ZK proofs cannot be generated via the UI, the dApp natively asks the `LoanSBT` contract "How many SBTs does this user have?" and publicly calculates eligibility via the traditional `applyForLoan` method. While functional, it exposes exact balances on the public ledger.
+
+#### 2. The New Way (Zero-Knowledge Privacy)
+- **Local Computation:** When a user applies for a loan, the Next.js frontend downloads the compiled WebAssembly (`.wasm`) circuit. The browser pulls the user's exact SBT count and total repaid history, generating a random cryptographic `salt`.
+- **The "Secret" Proof:** `snarkjs` crunches the numbers locally and spits out a Groth16 ZK Proof. The proof mathematically guarantees: *"This user has enough SBTs for this tier"*, without revealing exactly how many they have.
+- **Instant Verification:** The frontend sends this proof to the new `applyForLoanWithZK` function on the smart contract. The `LoanManager` feeds the proof into the strictly compiled `Groth16Verifier` smart contract, which instantly confirms it is mathematically sound.
+- **Privacy Achieved:** The smart contract approves the loan *without ever checking the user's SBT balance directly*. The blockchain strictly logs the proof and an obscure `identityCommitment` hash. The browser acts as the privacy engine, and the smart contract simply validates that the browser didn't cheat.
+
+---
+
 ## Tech Stack
 - **Frontend**: [Next.js](https://nextjs.org/), [Tailwind CSS](https://tailwindcss.com/), [Framer Motion](https://www.framer.com/motion/), [Vanta.js](https://vanta.com/), [Supabase](https://supabase.com/), [Privy](https://privy.io/).
 - **Blockchain**: [HashKey Chain](https://www.hashkey.id/), [Hardhat](https://hardhat.org/), [Ethers.js](https://docs.ethers.org/v6/).
@@ -158,7 +177,7 @@ By combining World ID and SBTs, Trust creates a fully trustless credit system. W
 ├── contracts/        # Solidity smart contracts (LoanManager, LoanSBT, Faucet)
 ├── frontend/         # Next.js web application
 ├── bot/              # Telegram notification & task automation bot
-├── circuits/         # [WIP] Circom ZK circuits for private credit scoring
+├── circuits/         # Circom ZK circuits for private credit scoring & loan eligibility
 ├── schema.sql        # Database schema
 └── README.md         # Project entry point
 ```

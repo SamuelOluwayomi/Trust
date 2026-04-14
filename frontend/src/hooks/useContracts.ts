@@ -313,6 +313,84 @@ export function useApplyForLoan() {
   return { apply, loading, error };
 }
 
+// --- APPLY FOR LOAN WITH ZK PROOF ---
+// Hybrid: generates a client-side Groth16 proof first, then calls applyForLoanWithZK.
+// If proof generation fails it automatically falls back to the standard applyForLoan.
+export function useApplyForLoanWithZK() {
+  const { user } = usePrivy();
+  const embeddedWallet = useEmbeddedWallet();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [usingZK, setUsingZK] = useState(false); // true while generating the proof
+
+  const applyWithZK = useCallback(async (
+    amountHSK: string,
+    nullifierHash: string,
+    sbtCount: number,
+    totalRepaidWei: bigint,
+    tierName: string
+  ) => {
+    if (!user || !embeddedWallet) return false;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const contract = await getLoanManagerContractSigned(embeddedWallet);
+      const amountWei = ethers.parseEther(amountHSK);
+      const collateral = (amountWei * 10n) / 100n;
+
+      // 1. Attempt ZK proof generation
+      setUsingZK(true);
+      const { generateLoanEligibilityProof } = await import("@/lib/zk");
+      const zkResult = await generateLoanEligibilityProof(sbtCount, totalRepaidWei, amountWei, tierName);
+      setUsingZK(false);
+
+      let tx;
+      if (zkResult && zkResult.pubSignals[1] === 1n) {
+        // SUCCESS — send ZK proof to the new smart contract function
+        console.log("[Borrow] Sending ZK proof transaction...");
+        tx = await contract.applyForLoanWithZK(
+          amountWei,
+          zkResult.pA,
+          zkResult.pB,
+          zkResult.pC,
+          zkResult.pubSignals,
+          { value: collateral }
+        );
+      } else {
+        // FALLBACK — ZK failed, use the standard flow. Nothing breaks.
+        console.warn("[Borrow] ZK proof failed or ineligible, falling back to standard flow.");
+        const nullifierBytes = ethers.zeroPadValue(ethers.toBeHex(BigInt(nullifierHash)), 32);
+        tx = await contract.applyForLoan(amountWei, nullifierBytes, { value: collateral });
+      }
+
+      await tx.wait();
+
+      // 2. Persist to Supabase (same as standard flow)
+      const tierId = Number(amountHSK) <= 0.02 ? "Bronze" : Number(amountHSK) <= 0.05 ? "Silver" : "Gold";
+      await Promise.all([
+        fetch("/api/supabase", { method: "POST", body: JSON.stringify({ table: "loans", data: { privy_id: user.id, amount: Number(amountHSK), tier: tierId, status: "Active", amount_paid: 0 } }), headers: { "Content-Type": "application/json" } }).catch(() => {}),
+      ]);
+
+      // Use direct supabase client like the standard hook
+      const { supabase } = await import("@/lib/supabase");
+      await supabase.from("loans").insert({ privy_id: user.id, amount: Number(amountHSK), tier: tierId, status: "Active", amount_paid: 0 });
+      await supabase.from("transactions").insert({ privy_id: user.id, type: "borrow", amount: Number(amountHSK) });
+
+      return true;
+    } catch (err: any) {
+      setUsingZK(false);
+      console.error("ZK Borrow failed:", err);
+      setError(err?.reason || err?.message || "Network error. Try a smaller loan.");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, embeddedWallet]);
+
+  return { applyWithZK, loading, error, usingZK };
+}
+
 // --- USER SBTs ---
 export function useUserSBTs() {
   const { user } = usePrivy();

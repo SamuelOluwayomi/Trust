@@ -3,10 +3,12 @@ pragma solidity ^0.8.28;
 
 import "./LoanSBT.sol";
 import "./IKycSBT.sol";
+import "./LoanEligibilityVerifier.sol";
 
 contract LoanManager is Ownable {
     LoanSBT public sbtContract;
     IKycSBT public kycSBT;  // HashKey Chain KYC SBT — set to address(0) to disable KYC checks
+    Groth16Verifier public zkVerifier; // ZK Loan Eligibility Verifier — set to address(0) to disable
 
     // Tier limits in HSK (wei)
     uint256 public constant BRONZE_LIMIT = 0.02 ether;
@@ -40,9 +42,10 @@ contract LoanManager is Ownable {
     event LoanRepaid(address indexed borrower, uint256 amount, uint256 tokenId);
     event LoanDefaulted(address indexed borrower, uint256 amount);
 
-    constructor(address _sbtContract, address _kycSBT) Ownable(msg.sender) {
+    constructor(address _sbtContract, address _kycSBT, address _zkVerifier) Ownable(msg.sender) {
         sbtContract = LoanSBT(_sbtContract);
         kycSBT = IKycSBT(_kycSBT);
+        zkVerifier = Groth16Verifier(_zkVerifier);
     }
 
     modifier notBlacklisted() {
@@ -117,6 +120,71 @@ contract LoanManager is Ownable {
         emit LoanIssued(msg.sender, amount, tier);
     }
 
+    /**
+     * @notice Apply for a loan with a ZK eligibility proof generated client-side.
+     * @dev The circuit proves sbtCount >= minSbtRequired and requestedAmount <= maxLoanAmount
+     *      without revealing the actual sbtCount or repayment history.
+     *      Falls back gracefully if zkVerifier is address(0) (i.e. disabled).
+     *
+     * Public signals layout (must match loan_eligibility.circom):
+     *   [0] identityCommitment  — Poseidon(sbtCount, totalRepaid, salt)
+     *   [1] eligible            — 1 if all ZK conditions pass
+     *   [2] requestedAmount     — loan amount in wei
+     *   [3] maxLoanAmount       — tier max in wei
+     *   [4] minSbtRequired      — SBTs needed for the tier
+     */
+    function applyForLoanWithZK(
+        uint256 amount,
+        uint[2] calldata _pA,
+        uint[2][2] calldata _pB,
+        uint[2] calldata _pC,
+        uint[5] calldata _pubSignals  // [identityCommitment, eligible, requestedAmount, maxLoanAmount, minSbtRequired]
+    ) external payable notBlacklisted noActiveLoan requireKYC {
+        // 1. Verify the ZK proof if verifier is configured
+        if (address(zkVerifier) != address(0)) {
+            require(
+                zkVerifier.verifyProof(_pA, _pB, _pC, _pubSignals),
+                "Invalid ZK eligibility proof"
+            );
+            // The circuit must output eligible = 1
+            require(_pubSignals[1] == 1, "ZK proof: not eligible");
+            // The proven requested amount must match what was sent
+            require(_pubSignals[2] == amount, "ZK proof: amount mismatch");
+        }
+
+        // 2. Use identityCommitment as the uniqueness nullifier
+        bytes32 nullifier = bytes32(_pubSignals[0]);
+        require(!usedNullifiers[nullifier], "ZK identity already used for loan");
+
+        Tier tier = _getTierForUser(msg.sender);
+        uint256 limit = _getLimitForTier(tier);
+        require(amount > 0 && amount <= limit, "Amount exceeds tier limit");
+
+        // 3. Require 10% collateral
+        uint256 collateral = (amount * COLLATERAL_PERCENT) / 100;
+        require(msg.value >= collateral, "Insufficient collateral (10% required)");
+
+        // 4. Store nullifier
+        usedNullifiers[nullifier] = true;
+
+        // 5. Record and disburse loan
+        activeLoans[msg.sender] = Loan({
+            amount: amount,
+            collateral: msg.value,
+            startTime: block.timestamp,
+            dueDate: block.timestamp + LOAN_DURATION,
+            tier: tier,
+            status: LoanStatus.Active
+        });
+
+        totalBorrowed[msg.sender] += amount;
+
+        require(address(this).balance >= amount, "Insufficient pool liquidity");
+        payable(msg.sender).transfer(amount);
+
+        emit LoanIssued(msg.sender, amount, tier);
+    }
+
     function repayLoan() external payable {
         Loan storage loan = activeLoans[msg.sender];
         require(loan.status == LoanStatus.Active, "No active loan");
@@ -172,6 +240,11 @@ contract LoanManager is Ownable {
     }
 
     // --- KYC Management ---
+
+    /// @notice Update the ZK Verifier contract reference. Set to address(0) to disable ZK verification.
+    function setZkVerifier(address _zkVerifier) external onlyOwner {
+        zkVerifier = Groth16Verifier(_zkVerifier);
+    }
 
     /// @notice Update the KYC SBT contract reference. Set to address(0) to disable KYC checks.
     function setKycSBT(address _kycSBT) external onlyOwner {

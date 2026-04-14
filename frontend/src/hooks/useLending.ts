@@ -10,6 +10,7 @@ const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_FAUCET_ADDRESS!;
 
 const LOAN_MANAGER_ABI = [
   "function applyForLoan(uint256 amount, bytes32 nullifier) external payable",
+  "function applyForLoanWithZK(uint256 amount, uint256[2] calldata _pA, uint256[2][2] calldata _pB, uint256[2] calldata _pC, uint256[5] calldata _pubSignals) external payable",
   "function repayLoan() external payable",
   "function getActiveLoan(address user) external view returns (tuple(uint256 amount, uint256 collateral, uint256 startTime, uint256 dueDate, uint8 tier, uint8 status))",
   "function getUserTier(address user) external view returns (uint8)",
@@ -47,6 +48,7 @@ export function useLending() {
   const [isBorrowing, setIsBorrowing] = useState(false);
   const [isRepaying, setIsRepaying] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [zkProving, setZkProving] = useState(false); // true while snarkjs generates the proof
   const [error, setError] = useState<string | null>(null);
 
   // Find the embedded wallet specifically to avoid external provider conflicts
@@ -156,6 +158,71 @@ export function useLending() {
     } catch (err: any) {
       console.error("Borrowing failed:", err);
       setError(err?.reason || err?.message || "Loan application failed. Check your gas!");
+      return false;
+    } finally {
+      setIsBorrowing(false);
+    }
+  };
+
+  // --- BORROW WITH ZK PROOF (Hybrid) ---
+  // Generates a Groth16 proof client-side, sends it to applyForLoanWithZK.
+  // Falls back to standard borrow() automatically if proof generation fails.
+  const borrowWithZK = async (amountHSK: number, nullifierHash?: string, sbtCount = 0, totalRepaidWei = 0n, tierName = "Bronze") => {
+    const wallet = getWallet();
+    setIsBorrowing(true);
+    setError(null);
+    try {
+      const signer = await getPrivySigner(wallet);
+      const contract = new ethers.Contract(LOAN_MANAGER_ADDRESS, LOAN_MANAGER_ABI, signer);
+      const amountWei = ethers.parseEther(amountHSK.toString());
+      const collateral = (amountWei * 10n) / 100n;
+
+      // 1. Try ZK proof generation (dynamically imported to keep initial bundle small)
+      setZkProving(true);
+      let zkResult = null;
+      try {
+        const { generateLoanEligibilityProof } = await import("@/lib/zk");
+        zkResult = await generateLoanEligibilityProof(sbtCount, totalRepaidWei, amountWei, tierName);
+      } catch (zkErr) {
+        console.warn("[ZK] Proof import/generation error, falling back:", zkErr);
+      }
+      setZkProving(false);
+
+      let tx;
+      if (zkResult && zkResult.pubSignals[1] === 1n) {
+        // ZK path — privacy-preserving
+        console.log("[Borrow] Using ZK proof path...");
+        tx = await contract.applyForLoanWithZK(
+          amountWei,
+          zkResult.pA,
+          zkResult.pB,
+          zkResult.pC,
+          zkResult.pubSignals,
+          { value: collateral }
+        );
+      } else {
+        // Fallback — standard path. App continues working perfectly.
+        console.warn("[Borrow] Falling back to standard applyForLoan.");
+        const loanNonce = Date.now().toString();
+        const nullifier = nullifierHash && nullifierHash !== "0"
+          ? ethers.keccak256(ethers.toUtf8Bytes(nullifierHash + "_loan_" + loanNonce))
+          : ethers.keccak256(ethers.toUtf8Bytes(user!.id + "_loan_" + loanNonce));
+        tx = await contract.applyForLoan(amountWei, nullifier, { value: collateral });
+      }
+
+      await tx.wait();
+
+      // 2. Supabase persistence — same as standard borrow
+      const tierNum = await contract.getUserTier(await signer.getAddress());
+      const tier = TIER_NAMES[Number(tierNum)] || "Bronze";
+      await supabase.from("loans").insert({ privy_id: user!.id, amount: amountHSK, tier, status: "Active", amount_paid: 0 });
+      await supabase.from("transactions").insert({ privy_id: user!.id, type: "borrow", amount: amountHSK });
+
+      return true;
+    } catch (err: any) {
+      setZkProving(false);
+      console.error("ZK Borrowing failed:", err);
+      setError(err?.reason || err?.message || "Loan application failed.");
       return false;
     } finally {
       setIsBorrowing(false);
@@ -284,6 +351,7 @@ export function useLending() {
 
   return {
     borrow,
+    borrowWithZK,
     repay,
     claimFaucet,
     sendFunds,
@@ -292,6 +360,7 @@ export function useLending() {
     isRepaying,
     isClaiming,
     isSending,
+    zkProving,
     error,
   };
 }

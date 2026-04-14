@@ -25,32 +25,35 @@ async function main() {
   const LoanManagerArtifact = JSON.parse(fs.readFileSync(`${artifactsPath}/LoanManager.sol/LoanManager.json`, "utf8"));
   const MockKycSBTArtifact = JSON.parse(fs.readFileSync(`${artifactsPath}/MockKycSBT.sol/MockKycSBT.json`, "utf8"));
 
-  // Use existing deployed Faucet and LoanSBT from previous runs to save gas/time
+  // Use existing deployed Faucet, LoanSBT and MockKycSBT from previous runs
   const faucetAddress = "0xCaB6c9B74b202cc7E2c8A56078Bd87a09dd5038A";
   const loanSBTAddress = "0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74";
+  const mockKycAddress = "0x9957a43088C530cD23659ecc092A4a3367d6a328";
 
   console.log("\n📦 Reusing existing Faucet at:", faucetAddress);
   console.log("📦 Reusing existing LoanSBT at:", loanSBTAddress);
+  console.log("📦 Reusing existing MockKycSBT at:", mockKycAddress);
 
-  // 1. Deploy MockKycSBT
-  console.log("\n📦 Deploying MockKycSBT for Hackathon Demo...");
-  const MockKycFactory = new ethers.ContractFactory(MockKycSBTArtifact.abi, MockKycSBTArtifact.bytecode, deployer);
-  const mockKyc = await MockKycFactory.deploy();
-  await mockKyc.waitForDeployment();
-  const mockKycAddress = await mockKyc.getAddress();
-  console.log("✅ MockKycSBT deployed to:", mockKycAddress);
+  // 1. Deploy the new ZK Verifier
+  console.log("\n📦 Deploying Groth16Verifier for Hackathon Demo...");
+  const VerifierArtifact = JSON.parse(fs.readFileSync(`${artifactsPath}/LoanEligibilityVerifier.sol/Groth16Verifier.json`, "utf8"));
+  const VerifierFactory = new ethers.ContractFactory(VerifierArtifact.abi, VerifierArtifact.bytecode, deployer);
+  const verifier = await VerifierFactory.deploy();
+  await verifier.waitForDeployment();
+  const verifierAddress = await verifier.getAddress();
+  console.log("✅ Groth16Verifier deployed to:", verifierAddress);
 
-  // 2. Deploy LoanManager (requires 2 args now: sbtContract, kycContract)
+  // 2. Deploy LoanManager (requires 3 args now: sbtContract, kycContract, zkVerifier)
   console.log("\n📦 Deploying LoanManager...");
   const LoanManagerFactory = new ethers.ContractFactory(LoanManagerArtifact.abi, LoanManagerArtifact.bytecode, deployer);
   
-  // Pass the newly deployed MockKycSBT address to strictly enforce KYC rules!
-  const loanManager = await LoanManagerFactory.deploy(loanSBTAddress, mockKycAddress);
+  // Pass the newly deployed verifier address to enable hybrid ZK loans
+  const loanManager = await LoanManagerFactory.deploy(loanSBTAddress, mockKycAddress, verifierAddress);
   await loanManager.waitForDeployment();
   const loanManagerAddress = await loanManager.getAddress();
   console.log("✅ LoanManager deployed to:", loanManagerAddress);
 
-  // 2. Link LoanSBT → LoanManager
+  // 3. Link LoanSBT → LoanManager
   console.log("\n🔗 Linking LoanSBT to new LoanManager...");
   const loanSBTContract = new ethers.Contract(loanSBTAddress, LoanSBTArtifact.abi, deployer);
   const tx = await loanSBTContract.setLoanManager(loanManagerAddress);
@@ -62,6 +65,7 @@ async function main() {
   console.log(`NEXT_PUBLIC_LOAN_SBT_ADDRESS=${loanSBTAddress}`);
   console.log(`NEXT_PUBLIC_LOAN_MANAGER_ADDRESS=${loanManagerAddress}`);
   console.log(`NEXT_PUBLIC_KYC_SBT_ADDRESS=${mockKycAddress}`);
+  console.log(`NEXT_PUBLIC_ZK_VERIFIER_ADDRESS=${verifierAddress}`);
 }
 
 main().catch((error) => {

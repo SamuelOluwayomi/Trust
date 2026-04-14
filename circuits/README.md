@@ -98,11 +98,11 @@ Both circuits use the Poseidon hash function (most efficient hash for ZK) and co
 
 ## Integration with Trust Protocol
 
-These circuits are designed to work alongside the on-chain credit system:
+These circuits correctly function alongside the on-chain credit system as an active **Hybrid Architecture**:
 
-1. **Frontend** computes the user's credit score from on-chain data (SBT count, repayment amounts)
-2. **User** generates a ZK proof locally proving eligibility
-3. **Smart contract** (future) can verify the proof on-chain using a Groth16 verifier
-4. **Privacy**: The verifier learns only that the user qualifies — never their actual score or history
+1. **Frontend Integration**: The Next.js frontend downloads the highly optimized `.wasm` and `.zkey` binaries for the `loan_eligibility` circuit directly into the browser.
+2. **Local Proof Generation**: When the user requests a loan, `snarkjs` constructs a Groth16 ZK proof strictly locally on the user's laptop using their live SBT count.
+3. **Smart Contract Verification**: The proof is passed natively inside the EVM transaction to the `LoanManager.sol` contract and instantly verified by the compiled `LoanEligibilityVerifier.sol` (export of the `loan_eligibility_final.zkey`).
+4. **Complete Privacy**: The verifier successfully allows the loan function to execute without natively checking the user's token balance. The verifier only learns that the user qualifies — never their actual score or repayment history.
 
-This enables **trustless undercollateralized lending** where the borrower's creditworthiness is cryptographically proven without exposing any private financial data.
+*Status: **Fully Deployed & Integrated**. The `loan_eligibility` circuit strictly calculates privacy-preserving tiers via `applyForLoanWithZK()`.*

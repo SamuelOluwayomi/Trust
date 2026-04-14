@@ -1,33 +1,32 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 /**
- * Deployment module for Trust Protocol
+ * Deployment module for Trust Protocol - ZK Hackathon Upgrade
  *
  * Deploys:
- *   1. LoanSBT
- *   2. LoanManager (with references to LoanSBT and HashKey KYC SBT)
- *   3. Configures LoanSBT to accept mints from LoanManager
- *
- * The KYC SBT address should be the HashKey Chain's deployed KYC SBT contract.
- * Set to ethers.ZeroAddress (0x000...000) to disable KYC checks.
+ *   1. Groth16Verifier (Zero-Knowledge Loan Eligibility Verifier)
+ *   2. LoanManager (References existing LoanSBT, KYC SBT, and the new ZK Verifier)
  */
 
-// HashKey Testnet KYC SBT address — update this with the actual address
-// Set to 0x0000000000000000000000000000000000000000 to disable KYC gating
-const KYC_SBT_ADDRESS = "0x0000000000000000000000000000000000000000";
+// Existing addresses from previous hackathon deploy
+const EXISTING_LOAN_SBT = "0x27D6797BE55D0b5976aBF624A9EDC35D0604Ce74";
+const EXISTING_KYC_SBT = "0x9957a43088C530cD23659ecc092A4a3367d6a328";
 
 const TrustModule = buildModule("Trust", (m) => {
-  // 1. Deploy LoanSBT
-  const loanSBT = m.contract("LoanSBT");
+  // 1. Deploy the new ZK Verifier
+  const zkVerifier = m.contract("Groth16Verifier");
 
-  // 2. Deploy LoanManager with references to LoanSBT and KYC SBT
-  const kycSbtAddress = m.getParameter("kycSbtAddress", KYC_SBT_ADDRESS);
-  const loanManager = m.contract("LoanManager", [loanSBT, kycSbtAddress]);
+  // 2. Deploy LoanManager using existing SBTs and new Verifier
+  const loanSbtAddress = m.getParameter("loanSbtAddress", EXISTING_LOAN_SBT);
+  const kycSbtAddress = m.getParameter("kycSbtAddress", EXISTING_KYC_SBT);
+  
+  const loanManager = m.contract("LoanManager", [loanSbtAddress, kycSbtAddress, zkVerifier]);
 
-  // 3. Authorize LoanManager to mint SBTs
-  m.call(loanSBT, "setLoanManager", [loanManager]);
+  // IMPORTANT: Since you are reusing the existing LoanSBT, you must manually call 
+  // `setLoanManager(YOUR_NEW_LOAN_MANAGER_ADDRESS)` on the LoanSBT contract after deploy
+  // so the new LoanManager has permission to mint SBTs to users.
 
-  return { loanSBT, loanManager };
+  return { zkVerifier, loanManager };
 });
 
 export default TrustModule;
