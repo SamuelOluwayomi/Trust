@@ -1,3 +1,16 @@
-node_modules/ 
-.env 
-.env.local 
+node_modules/
+.env
+.env.local
+
+# ZK Circuit Artifacts
+circuits/**/build/
+*.ptau
+*.zkey
+*.wasm
+*.r1cs
+*.sym
+witness.wtns
+
+# Only allow the finalized public circuits that the Next.js app needs
+!frontend/public/circuits/*.wasm
+!frontend/public/circuits/*.zkey
