@@ -13,6 +13,7 @@
 let snarkjsLoaded: any = null;
 async function getSnarkjs() {
   if (!snarkjsLoaded) {
+    // @ts-ignore - snarkjs does not provide official TypeScript declarations
     snarkjsLoaded = await import("snarkjs");
   }
   return snarkjsLoaded;
