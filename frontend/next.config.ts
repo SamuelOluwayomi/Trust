@@ -9,6 +9,21 @@ const nextConfig: NextConfig = {
       asyncWebAssembly: true,
       layers: true,
     };
+
+    // SnarkJS expects Node.js built-ins, but we are compiling for the browser
+    // This tells Webpack to ignore 'fs' and 'crypto' instead of crashing the build
+    if (!isServer) {
+        config.resolve.fallback = {
+            ...config.resolve.fallback,
+            fs: false,
+            path: false,
+            os: false,
+            crypto: false,
+            readline: false,
+            events: false,
+        };
+    }
+
     return config;
   },
 };
